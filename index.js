@@ -2028,6 +2028,10 @@ on(div, "touchstart", () => {
               return new Promise(function (resolve) { resolve(null);  }).then(function() {
                 process.stdout.write(ctx.req.method + ' ' + ctx.url.pathname);
 
+                if (ctx.req.method === 'POST' && ctx.url.pathname === '/xhr') {
+                  return handleXhrRequest(ctx);
+                }
+
                 switch (ctx.path.toLowerCase()) {
                   case '/':
                   case '/index.html':
@@ -2043,6 +2047,153 @@ on(div, "touchstart", () => {
                     return handleLocalFileRequest(ctx);
                 }
               });
+            }
+
+            /** @param {RequestContext} ctx */
+            function handleXhrRequest(ctx) {
+
+              return receiveBody().then(
+                /** @param {Buffer} bodyBuf */
+                function (bodyBuf) {
+                  var bodyJson = JSON.parse(bodyBuf.toString('utf8'));
+
+                  if (typeof bodyJson.url !== 'string') throw new Error('URL expected.');
+                  if (typeof bodyJson.method !== 'string') throw new Error('Method expected.');
+
+                  return makeHttpRequestWithRedirects(bodyJson).then(wrapResponse);
+                }
+              )
+
+              /** @param {{statusCode: number, statusMessage: string | undefined, headers: Record<string,string|string[]>, body: Buffer}} response */
+              function wrapResponse(response) {
+                try {
+                  if (response.body && response.body.length) {
+                    var parsedBody = JSON.parse(response.body.toString('utf8'));
+                    /** @type {boolean | undefined} */
+                    var succeedParsingBody = true;
+                  }
+                } catch (jsonError) {
+                }
+
+                if (succeedParsingBody) {
+                  var responseText = JSON.stringify({
+                    statusCode: response.statusCode,
+                    statusMessage: response.statusMessage,
+                    headers: response.headers
+                    // try to retain the exact shape of the response
+                  }, null, 2).replace(/}$/, '  "json": ' + response.body.toString('utf8') + '\n}');
+                } else {
+                  var responseMsgJson = {
+                    statusCode: response.statusCode,
+                    statusMessage: response.statusMessage,
+                    headers: response.headers,
+                  };
+                  if (response.body && response.body.length)
+                    responseMsgJson.text = response.body.toString('utf8');
+                  
+                  var responseText = JSON.stringify(responseMsgJson, null, 2);
+                }
+
+                return responseText;
+              }
+
+              function makeHttpRequestWithRedirects(options) {
+                return makeHttpRequest(options).then(withResponse);
+                /** @param {{statusCode: number, statusMessage: string | undefined, headers: Record<string,string|string[]>, body: Buffer}} response */
+                function withResponse(response) {
+                  if (response.statusCode > 300 && response.statusCode < 400) {
+                    // redirect
+                    var location = response.headers && response.headers.location || response.headers.Location;
+                    if (typeof location === 'string') {
+                      /** @type {typeof options} */
+                      var updatedOptions = {};
+                      for (var k in options) if (!(k in updatedOptions)) {
+                        updatedOptions[k] = options[k];
+                      }
+                      updatedOptions.url = location;
+
+                      return makeHttpRequest(updatedOptions).then(withResponse);
+                    }
+                  }
+
+                  return response;
+                }
+              }
+
+              /**
+               * @param {{
+               *  url: string;
+               *  method: string;
+               *  headers?: Record<string,string>
+               *  body?: string;
+               * }} options
+               * @returns {Promise<{statusCode: number, statusMessage: string | undefined, headers: Record<string,string|string[]>, body: Buffer}>}
+               */
+              function makeHttpRequest(options) {
+                var http = /^https/i.test(options.url) ? require('https') : require('http');
+
+                return new Promise(function (resolve, reject) {
+                  var request = http.request(
+                    options.url,
+                    { headers: options.headers },
+                    function (response) {
+                      var responseDataBufs = [];
+                      response.on('data', onResponseData);
+                      response.on('end', onResponseEnd);
+                      response.on('error', onResponseError);
+
+                      /** @param {Buffer} data */
+                      function onResponseData(data) {
+                        responseDataBufs.push(data);
+                      }
+
+                      function onResponseEnd() {
+                        var responseDataCombined = Buffer.concat(responseDataBufs);
+
+                        resolve({
+                          statusCode: /** @type {number} */(response.statusCode),
+                          statusMessage: response.statusMessage,
+                          headers: /** @type {Record<String, string | string[]>} */(response.headers),
+                          body: responseDataCombined
+                        });
+                      }
+
+                      /** @param {Error} error */
+                      function onResponseError(error) {
+                        reject(error);
+                      }
+                    }
+                  );
+
+                  if (options.body) request.write(options.body);
+                  request.end();
+                });
+              }
+
+              function receiveBody() {
+                return new Promise(function (resolve, reject) {
+                  /** @type {Buffer[]} */
+                  var bufs = [];
+
+                  ctx.req.on('data', onRequestData);
+                  ctx.req.on('end', onRequestEnd);
+                  ctx.req.on('error', onRequestError);
+
+                  /** @param {Buffer} data */
+                  function onRequestData(data) {
+                    bufs.push(data);
+                  }
+
+                  function onRequestEnd() {
+                    var combinedBufs = Buffer.concat(bufs);
+                    resolve(combinedBufs);
+                  }
+
+                  function onRequestError(error) {
+                    reject(error);
+                  }
+                });
+              }
             }
 
             /** @param {RequestContext} ctx */
