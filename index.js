@@ -1524,7 +1524,7 @@ I hope it works — firstly for me, and hopefully helps others.
      */
     function readFileAsync(file, encoding) {
       return new Promise(function (resolve, reject) {
-        fs.readFile(file, { encoding: typeof encoding === 'undefined' ? 'utf8' : /** @type {BufferEncoding} */(encoding) }, function (err, text) {
+        fs.readFile(file, { encoding: encoding === 'buffer' ? void 0: typeof encoding === 'undefined' ? 'utf8' : /** @type {BufferEncoding} */(encoding) }, function (err, text) {
           if (err) reject(err);
           else resolve(text);
         });
@@ -2068,12 +2068,11 @@ on(div, "touchstart", () => {
               function wrapResponse(response) {
                 try {
                   if (response.body && response.body.length) {
-                    var parsedBody = JSON.parse(response.body.toString('utf8'));
+                    JSON.parse(response.body.toString('utf8'));
                     /** @type {boolean | undefined} */
                     var succeedParsingBody = true;
                   }
-                } catch (jsonError) {
-                }
+                } catch (_err) {}
 
                 if (succeedParsingBody) {
                   var responseText = JSON.stringify({
@@ -2212,7 +2211,7 @@ on(div, "touchstart", () => {
                 if (localPath === '/' || !localPath) localPath = 'index.html';
 
                 var fullPath = path.resolve(__dirname, localPath);
-                return readFileAsync(fullPath, 'binary');
+                return readFileAsync(fullPath, 'buffer');
               });
             }
 
@@ -2350,6 +2349,7 @@ on(div, "touchstart", () => {
                   if (!entry.res.headersSent) {
                     if (result && (typeof result === 'string' || /** @type {Buffer} */(result).length > 0 && typeof /** @type {Buffer} */(result)[0] === 'number')) {
                       var mime = mimeByExt[entry.ext.replace(/^\./, '')] || mimeByExt['html'];
+                      if (/text|javascript|css/i.test(mime || '')) mime += '; charset=utf-8';
                       if (mime) entry.res.setHeader('Content-type', mime);
                       console.log(' [' + entry.path + ':' + /** @type {*} */(result).length + ']');
                       entry.res.end(result);
@@ -6381,6 +6381,10 @@ on(div, "touchstart", () => {
     }
 
     function bootUrlEncoded() {
+      if (isTtyWtf()) {
+        document.title = applyModifier('tty', 'typewriter') + '.' + applyModifier('WTF', 'box');
+      }
+
       var initialTmod = getTextAndVerbFromUrlEncoded();
       var text = initialTmod.text;
       var verb = initialTmod.verb;
