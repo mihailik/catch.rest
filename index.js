@@ -1082,15 +1082,15 @@ body {
   s-comment: this is LINED-PAPER
 }
 
-#shell #requestEditorHost .CodeMirror-code *:last-child pre.CodeMirror-line:after {
-  content: '';
+#shell #requestEditorHost .CodeMirror-code pre.CodeMirror-line .lined-paper {
+  display: none;
   position: absolute;
   left: 0;
   top: 100%;
   width: 100%;
   height: 20000%;
   background: repeating-linear-gradient(to bottom, #f0f0f0, #f0f0f0 1px, white 1px, white 1.25em);
-  
+
   s-comment: this is LINED-PAPER
 }
 
@@ -5595,7 +5595,7 @@ on(div, "touchstart", () => {
             logmousemove.bottomHeight += ' (' + bottomContainer.style.height + ')';
           }
 
-          console.log('mousemove ', logmousemove);
+          // console.log('mousemove ', logmousemove);
         }
 
       }
@@ -5611,14 +5611,14 @@ on(div, "touchstart", () => {
         if (!e) e = /** @type {MouseEvent} e */(window.event);
         if (e.preventDefault) e.preventDefault();
         createDragOverlay(e.pageY, e.offsetY);
-        console.log('mousedown ', dragStart);
+        // console.log('mousedown ', dragStart);
       }
 
       /** @param {MouseEvent} e */
       function splitter_mouseup(e) {
         if (!e) e = /** @type {MouseEvent} e */(window.event);
         if (e.preventDefault) e.preventDefault();
-        console.log('mouseup ', dragStart);
+        // console.log('mouseup ', dragStart);
         dropOverlay();
       }
 
@@ -5737,23 +5737,24 @@ on(div, "touchstart", () => {
           .defineMode('rest-request', restRequestMode);
 
         layout.requestEditorHost.innerHTML = '';
+        /** @type {import('codemirror').EditorConfiguration} */
+        var cmOptions = {
+          // @ts-ignore
+          lineNumbers: true,
+          extraKeys: addedCommands,
+          // @ts-ignore
+          foldGutter: true,
+          gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+          lineWrapping: true,
+          autofocus: true
+        };
+
         if (verb === 'splash') {
+          cmOptions.value = getSplash();
+          cmOptions.mode = 'markdown';
           var editor = createCodeMirrorWithFirstClickChange(
             layout.requestEditorHost,
-            {
-              value: getSplash(),
-
-              mode: 'markdown',
-              //inputStyle: 'textarea', // force textarea, because contentEditable is flaky on mobile
-
-              lineNumbers: true,
-              extraKeys: addedCommands,
-              // @ts-ignore
-              foldGutter: true,
-              gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
-              lineWrapping: true,
-              autofocus: true
-            },
+            cmOptions,
             function () {
               editor.setOption('mode', isPlainTextVerb(verb) ? 'markdown' : 'rest-request');
               editor.setValue(text);
@@ -5763,29 +5764,22 @@ on(div, "touchstart", () => {
               updateVerbAutoDetect();
             });
         } else {
+          cmOptions.value = text;
           var editor =
             // @ts-ignore
             CodeMirror(
               layout.requestEditorHost,
-              {
-                value: text,
-                mode: isPlainTextVerb(verb) ? 'markdown' : 'rest-request',
-                //inputStyle: 'textarea', // force textarea, because contentEditable is flaky on mobile
-                lineNumbers: true,
-                extraKeys: addedCommands,
-                // @ts-ignore
-                foldGutter: true,
-                gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
-                lineWrapping: true,
-                autofocus: true
-              }
+              cmOptions
             );
 
           editor.on('changes', debounce(function () {
             updateVerbAutoDetect(true);
           }, 200, 900));
+
           updateVerb(verb);
         }
+
+        addLinedPaperHandling(editor);
 
         /** @type {ReturnType<typeof requireSplitter>} */
         var withSplitter;
@@ -5796,6 +5790,72 @@ on(div, "touchstart", () => {
         var requestVerbSidebarLayout;
         /** @type {ReturnType<typeof createPlainTextSidebarLayout>} */
         var plainTextSidebarLayout;
+
+        /** @type {{ lineHandle: import('codemirror').LineHandle, lineElem: HTMLElement, linedPaperElem: HTMLElement } | undefined} */
+        var lastLineEntry;
+
+        /** @param {import('codemirror').Editor} editor */
+        function addLinedPaperHandling(editor) {
+          var updateLinedPaperHeightTimeout;
+          editor.on('refresh', function () {
+            queueUpdate();
+          });
+
+          editor.on('scroll', function () {
+            queueUpdate();
+          });
+
+          editor.on('renderLine', function (cm, lineHandle, domElem) {
+            var doc = cm.getDoc();
+            var lastLine = doc.getLineNumber(lineHandle) === doc.lineCount() - 1;
+            if (!lastLine) return;
+
+            var linedPaperElem = document.createElement('div');
+            linedPaperElem.className = 'lined-paper';
+            // linedPaperElem.style.height = gapHeight + 'px';
+            linedPaperElem.style.display = 'block';
+            domElem.appendChild(linedPaperElem);
+
+            lastLineEntry = {
+              lineHandle: lineHandle,
+              lineElem: domElem,
+              linedPaperElem: linedPaperElem
+            };
+
+            clearTimeout(updateLinedPaperHeightTimeout);
+            updateLinedPaperHeightTimeout = setTimeout(updateLinedPaperHeight, 10);
+          });
+
+          updateLinedPaperHeightTimeout = setTimeout(updateLinedPaperHeight, 10);
+
+          if (typeof ResizeObserver === 'function') {
+            const resizeObserver = new ResizeObserver(function () {
+              queueUpdate();
+            });
+            resizeObserver.observe(editor.getWrapperElement());
+          }
+
+          editor.refresh();
+
+          function queueUpdate() {
+            if (!lastLineEntry) return;
+
+            clearTimeout(updateLinedPaperHeightTimeout);
+            updateLinedPaperHeightTimeout = setTimeout(updateLinedPaperHeight, 10);
+          }
+
+          function updateLinedPaperHeight() {
+            if (!lastLineEntry) return;
+            var doc = editor.getDoc();
+            if (typeof doc.getLineNumber(lastLineEntry.lineHandle) !== 'number') return;
+
+            var scrollInfo = editor.getScrollInfo();
+            var bottom = editor.charCoords({ line: doc.lineCount(), ch: 1 }).bottom;
+            var gapHeight = scrollInfo.clientHeight > bottom ? scrollInfo.clientHeight - bottom : void 0;
+
+            console.log('updateLinedPaperHeight ', lastLineEntry.linedPaperElem.style.height = (gapHeight || 0) + 'px');
+          }
+        }
 
         /** @param {string} newVerb */
         function updateVerb(newVerb) {
@@ -6219,7 +6279,7 @@ on(div, "touchstart", () => {
             withCredentials: true,
             credentials: 'include',
             headers: /** @type {*} */({ entries: headers }),
-            body: parsFirst.verb === 'GET' || !bodyNormalized ? undefined :
+            body: parsFirst.verb === 'GET' || !bodyNormalized ? void 0 :
               bodyNormalized
           });
           ftc.then(
