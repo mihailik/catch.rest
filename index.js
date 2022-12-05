@@ -1266,6 +1266,7 @@ body {
 
   */});
     embeddedMinCSS_authenticityMarker = calcHash(embeddedMinCSS).toString(36);
+    // font inherit is here to avoid empty CSS rule causing IDE warnings
     embeddedMinCSS += '\n.cssAuthenticityMarker{font: inherit; /' + '* {hex:' + embeddedMinCSS_authenticityMarker + '} *' + '/}';
     return embeddedMinCSS;
   })();
