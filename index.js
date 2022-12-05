@@ -1195,6 +1195,10 @@ body {
   text-shadow: -1px -1px 2px #4101017d, 1px 1px 2px #ffffffba;
 }
 
+.bottomHost {
+  font-size: 85%;
+}
+
 #shell #editorModeSidebar {
   / * Firefox * /
   scrollbar-width: none;
@@ -5506,6 +5510,7 @@ on(div, "touchstart", () => {
         bottomContainer.style.transform = '';
       }, 1);
       var bottomHost = document.createElement('div');
+      bottomHost.className = 'bottomHost';
       bottomHost.style.cssText =
         'position: relative; width: 100%; height: 100%;';
       bottomContainer.appendChild(bottomHost);
@@ -5776,6 +5781,7 @@ on(div, "touchstart", () => {
             });
         } else {
           cmOptions.value = text;
+          cmOptions.mode = 'rest-request';
           var editor =
             // @ts-ignore
             CodeMirror(
