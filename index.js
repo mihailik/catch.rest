@@ -311,10 +311,21 @@ function catchREST() {
 
   /** @param {Function} fn */
   function getFunctionCommentContent(fn) {
-    return (fn + '').replace(getFunctionCommentContent.regex_functionShape, getFunctionCommentContent.takeContent);
+    return (fn + '').replace(
+      getFunctionCommentContent.regex_functionShape,
+      getFunctionCommentContent.takeContent
+    ).replace(
+      getFunctionCommentContent.regex_starSpaceSlash,
+      '*' + '/' // just in case let's not put verbatim comments in string literals
+    ).replace(
+      getFunctionCommentContent.regex_slashSpaceStar,
+      '/' + '*' // just in case let's not put verbatim comments in string literals
+    );
   }
-  getFunctionCommentContent.takeContent = function (_whole, _lead, content, _tail) { return trimEnd(content); };
   getFunctionCommentContent.regex_functionShape = /^([\s\S\n\r]*\/\*\s*)([\s\S\n\r]*)(\s*\*\/[\s\r\n]*}[\s\r\n]*)$/;
+  getFunctionCommentContent.takeContent = function (_whole, _lead, content, _tail) { return trimEnd(content); };
+  getFunctionCommentContent.regex_starSpaceSlash = /\* \//g;
+  getFunctionCommentContent.regex_slashSpaceStar = /\/ \*/g;
 
   function getFunctionBody(fn) {
     return (fn + '').replace(getFunctionBody.regex_functionShape, getFunctionBody.takeContent);
@@ -1078,8 +1089,8 @@ body {
 }
 
 #shell #requestEditorHost .CodeMirror-wrap pre.CodeMirror-line, .CodeMirror-wrap pre.CodeMirror-line-like {
+  / * this is LINED-PAPER * /
   border-bottom: solid 1px #f0f0f0;
-  s-comment: this is LINED-PAPER
 }
 
 #shell #requestEditorHost .CodeMirror-code pre.CodeMirror-line .lined-paper {
@@ -1090,8 +1101,7 @@ body {
   width: 100%;
   height: 20000%;
   background: repeating-linear-gradient(to bottom, #f0f0f0, #f0f0f0 1px, white 1px, white 1.25em);
-
-  s-comment: this is LINED-PAPER
+  / * this is LINED-PAPER * /
 }
 
 #shell .CodeMirror-gutters {
@@ -1186,14 +1196,14 @@ body {
 }
 
 #shell #editorModeSidebar {
-  s-comment: Firefox
+  / * Firefox * /
   scrollbar-width: none;
 
-  s-comment: Internet Explorer 10+
+  / * Internet Explorer 10+ * /
   -ms-overflow-style: none;
 }
 #shell #editorModeSidebar::-webkit-scrollbar {
-  s-comment: WebKit
+  / * WebKit * /
   width: 0;
   height: 0;
 }
@@ -1256,7 +1266,7 @@ body {
 
   */});
     embeddedMinCSS_authenticityMarker = calcHash(embeddedMinCSS).toString(36);
-    embeddedMinCSS += '\n.cssAuthenticityMarker{/' + '* {hex:' + embeddedMinCSS_authenticityMarker + '} *' + '/}';
+    embeddedMinCSS += '\n.cssAuthenticityMarker{font: inherit; /' + '* {hex:' + embeddedMinCSS_authenticityMarker + '} *' + '/}';
     return embeddedMinCSS;
   })();
 
