@@ -1037,7 +1037,7 @@ html {
   margin:0;padding:0;
   width:100%;height:100%;
 
-  background: #225368; color: black;
+  background: #235368; color: black;
   font-family:
     "Note Sans Math", "Note Emoji", "Noto Sans Symbols", "Noto Sans Symbols 2", "Note Sans",
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
@@ -1061,6 +1061,7 @@ body {
   left: 0; top: 0;
   width: 100%; height: 100%;
   font: inherit;
+  background: transparent;
 }
 
 .CodeMirror .cm-req-verb {
@@ -1088,24 +1089,37 @@ body {
   padding-left: 3.3em;
 }
 
-#shell #requestEditorHost .CodeMirror-wrap pre.CodeMirror-line, .CodeMirror-wrap pre.CodeMirror-line-like {
-  / * this is LINED-PAPER * /
-  border-bottom: solid 1px #f0f0f0;
+#shell .CodeMirror .CodeMirror-lines {
+  background: white;
 }
 
-#shell #requestEditorHost .CodeMirror-code pre.CodeMirror-line .lined-paper {
+#shell .CodeMirror-code pre.CodeMirror-line .lined-paper {
   display: none;
   position: absolute;
   left: 0;
   top: 100%;
   width: 100%;
   height: 20000%;
+  / * this is LINED-PAPER * /
+}
+
+#shell #requestEditorHost .CodeMirror-wrap pre.CodeMirror-line, .CodeMirror-wrap pre.CodeMirror-line-like {
+  / * this is LINED-PAPER * /
+  border-bottom: solid 1px #f0f0f0;
+}
+
+#shell #requestEditorHost .CodeMirror-code pre.CodeMirror-line .lined-paper {
   background: repeating-linear-gradient(to bottom, #f0f0f0, #f0f0f0 1px, white 1px, white 1.25em);
   / * this is LINED-PAPER * /
 }
 
+#shell .bottomHost .CodeMirror-code pre.CodeMirror-line .lined-paper {
+  background: white;
+}
+
 #shell .CodeMirror-gutters {
-  background: #225368;
+  background: transparent; / * #225368 * /
+  border: none;
 }
 
 #shell .CodeMirror-linenumber {
@@ -1173,7 +1187,7 @@ body {
 }
 
 #shell #leftBar {
-  background: #0c4d69;
+  background: transparent; / * #0c4d69 * /
 }
 
 #shell #leftBar #leftTop > * {
@@ -1195,7 +1209,7 @@ body {
   text-shadow: -1px -1px 2px #4101017d, 1px 1px 2px #ffffffba;
 }
 
-.bottomHost {
+.bottomHost .CodeMirror .CodeMirror-line  {
   font-size: 85%;
 }
 
@@ -5683,6 +5697,69 @@ on(div, "touchstart", () => {
     }
 
     /**
+     * @param {{
+     *  host: HTMLElement;
+     * }} options
+     */
+    function createTabs(options) {
+      var host = options.host;
+      // host.innerHTML = getFunctionCommentContent(function () {/*
+      //   <div>
+      //   </div>
+      // */});
+
+      var currentTab;
+
+      var tabsObject = {
+        addTab: addTab,
+        switchToTab: switchToTab,
+        getCurrentTab: getCurrentTab,
+        ontabswitched: void 0
+      };
+
+      /** @typedef {{
+       *  accent: string;
+       *  labelElem: HTMLElement;
+       *  contentElem: HTMLElement;
+       * }} TabEntry */
+
+      /** @type {TabEntry[]} */
+      var tabEntryList = [];
+
+      return tabsObject;
+
+      /**
+       * @param {{
+       *  accent: string;
+       *  label: string;
+       * }} tabOptions 
+       */
+      function addTab(tabOptions) {
+        var labelElem = document.createElement('div');
+        var contentElem = document.createElement('div');
+
+        /** @type {TabEntry} */
+        var tabEntry = {
+          accent: tabOptions.accent,
+          labelElem: labelElem,
+          contentElem: contentElem
+        };
+
+        tabEntryList.push(tabEntry);
+
+        return tabEntry;
+      }
+
+      function getCurrentTab() {
+        return currentTab;
+      }
+
+      function switchToTab(tab) {
+        //
+      }
+    }
+
+    /**
      * @param {string} text
      * @param {string} verb
      */
@@ -5712,12 +5789,12 @@ on(div, "touchstart", () => {
             .map(function (_, index) { return index + 1; }).join('<br>');
         console.log('Loading..');
         layout.leftBottom.style.whiteSpace = 'nowrap';
-        layout.leftBottom.textContent = drinkChar + ' Loading..';
+        set(layout.leftBottom, drinkChar + ' Loading..');
       }
 
       function loadingTakesTime() {
         layout.pseudoEditor.value = (layout.pseudoEditor.value || '').replace(/^Loading\.\./, 'Loading...');
-        layout.leftBottom.textContent = drinkChar + ' Loading...';
+        set(layout.leftBottom, drinkChar + ' Loading...');
         // TODO: whatever progress...
       }
 
@@ -5729,7 +5806,7 @@ on(div, "touchstart", () => {
       function loadingComplete(persist, textOverride, modeOverride) {
         if (typeof textOverride !== 'undefined') text = textOverride;
         if (typeof modeOverride !== 'undefined') verb = modeOverride;
-        layout.leftBottom.textContent = drinkChar + ' OK';
+        set(layout.leftBottom, drinkChar + ' OK');
 
         var addedCommands = /** @type {import('codemirror').KeyMap} */ ({
           'Ctrl-Enter': executeSendRequestCommand,
@@ -5808,12 +5885,13 @@ on(div, "touchstart", () => {
         /** @type {ReturnType<typeof createPlainTextSidebarLayout>} */
         var plainTextSidebarLayout;
 
-        /** @type {{ lineHandle: import('codemirror').LineHandle, lineElem: HTMLElement, linedPaperElem: HTMLElement } | undefined} */
-        var lastLineEntry;
-
         /** @param {import('codemirror').Editor} editor */
         function addLinedPaperHandling(editor) {
+          /** @type {{ lineHandle: import('codemirror').LineHandle, lineElem: HTMLElement, linedPaperElem: HTMLElement } | undefined} */
+          var lastLineEntry;
+
           var updateLinedPaperHeightTimeout;
+          var updateLinedPaperDelay = 10;
           editor.on('refresh', function () {
             queueUpdate();
           });
@@ -5822,7 +5900,66 @@ on(div, "touchstart", () => {
             queueUpdate();
           });
 
-          editor.on('renderLine', function (cm, lineHandle, domElem) {
+          editor.on('renderLine', renderLineHandler);
+
+          updateLinedPaperHeightTimeout = setTimeout(updateLinedPaperHeight, 10);
+
+          if (typeof ResizeObserver === 'function') {
+            var resizeObserver = new ResizeObserver(function () {
+              queueUpdate();
+            });
+            resizeObserver.observe(editor.getWrapperElement());
+            var parent = editor.getWrapperElement().parentElement;
+            if (parent) resizeObserver.observe(parent);
+          }
+          on(editor.getWrapperElement(), 'mousemove', queueUpdateLong);
+          on(editor.getWrapperElement(), 'mouseup', queueUpdateLong);
+          on(editor.getWrapperElement(), 'touchstart', queueUpdateLong);
+          on(editor.getWrapperElement(), 'touchmove', queueUpdateLong);
+
+          editor.refresh();
+
+          function queueUpdateLong() {
+            queueUpdate(900);
+          }
+
+          /** @param {number=} time */
+          function queueUpdate(time) {
+            if (!lastLineEntry) return;
+
+            if (!time) time = 10;
+            if (updateLinedPaperHeightTimeout && updateLinedPaperDelay < time) return; // if it's urgent, keep it urgent
+
+            updateLinedPaperDelay = time;
+
+            clearTimeout(updateLinedPaperHeightTimeout);
+            updateLinedPaperHeightTimeout = setTimeout(updateLinedPaperHeight, time || 10);
+          }
+
+          function updateLinedPaperHeight() {
+            updateLinedPaperDelay = 10;
+            updateLinedPaperHeightTimeout = 0;
+            if (!lastLineEntry) return;
+            var doc = editor.getDoc();
+            if (typeof doc.getLineNumber(lastLineEntry.lineHandle) !== 'number') return;
+
+            var scrollInfo = editor.getScrollInfo();
+            var top = editor.charCoords({ line: 0, ch: 1 }).top;
+            var bottom = editor.charCoords({ line: doc.lineCount(), ch: 1 }).bottom;
+            var contentHeight = bottom - top;
+            var gapHeight = scrollInfo.clientHeight > contentHeight ? scrollInfo.clientHeight - contentHeight : void 0;
+            var gapHeightStr = (gapHeight || 0) + 'px';
+            if (lastLineEntry.linedPaperElem.style.height != gapHeightStr) {
+              lastLineEntry.linedPaperElem.style.height = gapHeightStr;
+            }
+          }
+
+          /**
+           * @param {import('codemirror').Editor} cm
+           * @param {import('codemirror').LineHandle} lineHandle
+           * @param {HTMLElement} domElem
+           */
+          function renderLineHandler(cm, lineHandle, domElem) {
             var doc = cm.getDoc();
             var lastLine = doc.getLineNumber(lineHandle) === doc.lineCount() - 1;
             if (!lastLine) return;
@@ -5839,38 +5976,7 @@ on(div, "touchstart", () => {
               linedPaperElem: linedPaperElem
             };
 
-            clearTimeout(updateLinedPaperHeightTimeout);
-            updateLinedPaperHeightTimeout = setTimeout(updateLinedPaperHeight, 10);
-          });
-
-          updateLinedPaperHeightTimeout = setTimeout(updateLinedPaperHeight, 10);
-
-          if (typeof ResizeObserver === 'function') {
-            const resizeObserver = new ResizeObserver(function () {
-              queueUpdate();
-            });
-            resizeObserver.observe(editor.getWrapperElement());
-          }
-
-          editor.refresh();
-
-          function queueUpdate() {
-            if (!lastLineEntry) return;
-
-            clearTimeout(updateLinedPaperHeightTimeout);
-            updateLinedPaperHeightTimeout = setTimeout(updateLinedPaperHeight, 10);
-          }
-
-          function updateLinedPaperHeight() {
-            if (!lastLineEntry) return;
-            var doc = editor.getDoc();
-            if (typeof doc.getLineNumber(lastLineEntry.lineHandle) !== 'number') return;
-
-            var scrollInfo = editor.getScrollInfo();
-            var bottom = editor.charCoords({ line: doc.lineCount(), ch: 1 }).bottom;
-            var gapHeight = scrollInfo.clientHeight > bottom ? scrollInfo.clientHeight - bottom : void 0;
-
-            console.log('updateLinedPaperHeight ', lastLineEntry.linedPaperElem.style.height = (gapHeight || 0) + 'px');
+            queueUpdate();
           }
         }
 
@@ -6357,6 +6463,8 @@ on(div, "touchstart", () => {
                   readOnly: true,
                   lineWrapping: true
                 });
+            
+            addLinedPaperHandling(cm);
 
             return cm;
           }
@@ -6692,7 +6800,8 @@ Send this to test?
                 case 3: // text
                 case 4: // CDATA
                 // case 8: // comment
-                  combined.push(nod.textContent);
+                  var textContent = nod.textContent || nod.nodeValue || /** @type {*} */(nod).innerText;
+                  if (textContent) combined.push(textContent);
                   break;
               }
             }

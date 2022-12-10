@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<!-- {build-by-hash:1tr8sixtej9 Mon Dec 05 2022 21:42:36 GMT+0000 (Greenwich Mean Time) with  darwin/x64} -->
+<!-- {build-by-hash:1vcjqabfmyc Tue Dec 06 2022 00:16:47 GMT+0000 (Greenwich Mean Time) with  darwin/x64} -->
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -42,7 +42,7 @@ html {
   margin:0;padding:0;
   width:100%;height:100%;
 
-  background: #225368; color: black;
+  background: #235368; color: black;
   font-family:
     "Note Sans Math", "Note Emoji", "Noto Sans Symbols", "Noto Sans Symbols 2", "Note Sans",
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
@@ -66,6 +66,7 @@ body {
   left: 0; top: 0;
   width: 100%; height: 100%;
   font: inherit;
+  background: transparent;
 }
 
 .CodeMirror .cm-req-verb {
@@ -93,6 +94,10 @@ body {
   padding-left: 3.3em;
 }
 
+#shell .CodeMirror .CodeMirror-lines {
+  background: white;
+}
+
 #shell #requestEditorHost .CodeMirror-wrap pre.CodeMirror-line, .CodeMirror-wrap pre.CodeMirror-line-like {
   /* this is LINED-PAPER */
   border-bottom: solid 1px #f0f0f0;
@@ -109,8 +114,13 @@ body {
   /* this is LINED-PAPER */
 }
 
+#shell .bottomHost .CodeMirror-code pre.CodeMirror-line .lined-paper {
+  background: white;
+}
+
 #shell .CodeMirror-gutters {
-  background: #225368;
+  background: transparent; /* #225368 */
+  border: none;
 }
 
 #shell .CodeMirror-linenumber {
@@ -178,7 +188,7 @@ body {
 }
 
 #shell #leftBar {
-  background: #0c4d69;
+  background: transparent; /* #0c4d69 */
 }
 
 #shell #leftBar #leftTop > * {
@@ -200,7 +210,7 @@ body {
   text-shadow: -1px -1px 2px #4101017d, 1px 1px 2px #ffffffba;
 }
 
-.bottomHost {
+.bottomHost .CodeMirror .CodeMirror-line  {
   font-size: 85%;
 }
 
@@ -272,7 +282,7 @@ body {
 #shell #editorModeSidebar button.pressed .mod-button-content {
   transform: translate(2px, 2px);
 }
-.cssAuthenticityMarker{font: inherit; /* {hex:21mp99gg2t9} */}
+.cssAuthenticityMarker{font: inherit; /* {hex:1r4ez44rvce} */}
 </style>
 </head><body><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto Sans Math">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto Sans">
