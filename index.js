@@ -6783,7 +6783,7 @@ Send this to test?
      * @param {string} uniquenessSource
      */
     function bootBacked(uniquenessSource) {
-      var baseUrl = location && /localhost|(127\.)/i.test(location.hostname) ? './' : 'https://catch.rest/';
+      // var baseUrl = location && /localhost|(127\.)/i.test(location.hostname) ? './' : 'https://catch.rest/';
       var thisScriptUrl = getThisScriptAddress() || '//catch.rest/index.js';
 
       var shellLoader = shell('Loading...', 'text');
