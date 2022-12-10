@@ -2675,12 +2675,23 @@ on(div, "touchstart", function () {
         };
 
         xhr.withCredentials = true;
-        xhr.open((opts.method || 'GET'), url);
+        try {
+          xhr.open((opts.method || 'GET').toUpperCase(), url);
+        } catch (error) {
+          error.message += ' for ' + (opts.method || 'GET').toUpperCase() + ' at ' + url;
+          throw error;
+        }
+
         if (opts.headers) {
           for (var i = 0; i < opts.headers.entries.length; i++) {
             /** @type{[string, string]} */
             var entry = opts.headers.entries[i];
-            xhr.setRequestHeader(entry[0], entry[1]);
+            try {
+              xhr.setRequestHeader(entry[0], entry[1]);
+            } catch (headerSetError) {
+              if (typeof console !== 'undefined' && console && typeof console.log === 'function')
+                console.log('Setting ', entry, headerSetError);
+            }
           }
         }
 
@@ -6409,6 +6420,8 @@ on(div, "touchstart", function () {
 
           set(withSplitter.splitterMainPanel, verbContinuousTense + '...');
 
+          console.log('executeSendRequestCommand ', pars, parsFirst);
+
           var startTime = getTimeNow();
           var ftc = fetchXHR(normalizedUrl, {
             method: parsFirst.verb,
@@ -6436,7 +6449,8 @@ on(div, "touchstart", function () {
                 replyEditor.setValue(text);
               }
 
-            }, function (err) {
+            },
+            function (err) {
               var replyTime = getTimeNow() - startTime;
 
               editor.setOption('readOnly', false);
