@@ -5808,7 +5808,11 @@ on(div, "touchstart", () => {
         if (typeof modeOverride !== 'undefined') verb = modeOverride;
         set(layout.leftBottom, drinkChar + ' OK');
 
+        /** @type {import('codemirror').Editor[]} */
+        var tabBetweenEditors = [];
+
         var addedCommands = /** @type {import('codemirror').KeyMap} */ ({
+          Tab: executeTabCommand,
           'Ctrl-Enter': executeSendRequestCommand,
           'Cmd-Enter': executeSendRequestCommand,
           'Ctrl-B': executeApplyBoldModifierCommand,
@@ -5872,6 +5876,8 @@ on(div, "touchstart", () => {
 
           updateVerb(verb);
         }
+
+        tabBetweenEditors.push(editor);
 
         addLinedPaperHandling(editor);
 
@@ -6349,6 +6355,14 @@ on(div, "touchstart", () => {
         function executeApplyTypewriterModifierCommand() { return applyModifierCommand('typewriter'); }
         function executeApplyUnderlinedModifierCommand() { return applyModifierCommand('underlined'); }
 
+        /** @param {import('codemirror').Editor} cm */
+        function executeTabCommand(cm) {
+          var editorPos = tabBetweenEditors.indexOf(cm);
+          if (editorPos < 0) return;
+          var nextCm = tabBetweenEditors[(editorPos + 1) % tabBetweenEditors.length];
+          nextCm.focus();
+        }
+
         function executeSendRequestCommand() {
           var pars = parseTextRequest(editor.getValue());
 
@@ -6458,12 +6472,17 @@ on(div, "touchstart", () => {
                   // @ts-ignore
                   foldGutter: true,
                   gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+                  extraKeys: {
+                    Tab: executeTabCommand
+                  },
 
                   lineNumbers: true,
                   readOnly: true,
                   lineWrapping: true
                 });
-            
+
+            tabBetweenEditors.push(cm);
+
             addLinedPaperHandling(cm);
 
             return cm;
