@@ -1,4 +1,4 @@
-// {build-by-hash:1ctqs24zohm Sat Dec 10 2022 10:00:54 GMT+0000 (Greenwich Mean Time) with  darwin/x64}
+// {build-by-hash:218dorddn5u Sat Dec 10 2022 14:18:07 GMT+0000 (Oge Mpaghara Greemwich Mean) with  darwin/x64}
 // #region codemirror
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
 // Distributed under an MIT license: https://codemirror.net/5/LICENSE
@@ -12661,7 +12661,7 @@ CodeMirror.defineMode("css", function(config, parserConfig) {
     "stroke-dasharray", "stroke-dashoffset", "stroke-linecap", "stroke-linejoin",
     "stroke-miterlimit", "stroke-opacity", "stroke-width", "text-rendering",
     "baseline-shift", "dominant-baseline", "glyph-orientation-horizontal",
-    "glyph-orientation-vertical", "text-anchor", "writing-mode",
+    "glyph-orientation-vertical", "text-anchor", "writing-mode"
   ], propertyKeywords = keySet(propertyKeywords_);
 
   var nonStandardPropertyKeywords_ = [

@@ -603,7 +603,7 @@ function catchREST() {
     boldfractur: { AZ: '𝕬𝕭𝕮𝕯𝕰𝕱𝕲𝕳𝕴𝕵𝕶𝕷𝕸𝕹𝕺𝕻𝕼𝕽𝕾𝕿𝖀𝖁𝖂𝖃𝖄𝖅', az: '𝖆𝖇𝖈𝖉𝖊𝖋𝖌𝖍𝖎𝖏𝖐𝖑𝖒𝖓𝖔𝖕𝖖𝖗𝖘𝖙𝖚𝖛𝖜𝖝𝖞𝖟' },
     cursive: { AZ: '𝒜𝐵𝒞𝒟𝐸𝐹𝒢𝐻𝐼𝒥𝒦𝐿𝑀𝒩𝒪𝒫𝒬𝑅𝒮𝒯𝒰𝒱𝒲𝒳𝒴𝒵', az: '𝒶𝒷𝒸𝒹𝑒𝒻𝑔𝒽𝒾𝒿𝓀𝓁𝓂𝓃𝑜𝓅𝓆𝓇𝓈𝓉𝓊𝓋𝓌𝓍𝓎𝓏' }, // TODO: handle cursive B, E, F, H, I, L, M, R
     boldcursive: { AZ: '𝓐𝓑𝓒𝓓𝓔𝓕𝓖𝓗𝓘𝓙𝓚𝓛𝓜𝓝𝓞𝓟𝓠𝓡𝓢𝓣𝓤𝓥𝓦𝓧𝓨𝓩', az: '𝓪𝓫𝓬𝓭𝓮𝓯𝓰𝓱𝓲𝓳𝓴𝓵𝓶𝓷𝓸𝓹𝓺𝓻𝓼𝓽𝓾𝓿𝔀𝔁𝔂𝔃' },
-    super: { AP: 'ᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾ', Q: 'ᴼ̴', RW: 'ᴿˢᵀᵁⱽᵂ', ap: 'ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖ', q: '٩', rz: 'ʳˢᵗᵘᵛʷˣʸᶻ', '09': '⁰¹²³⁴⁵⁶⁷⁸⁹' },
+    'super': { AP: 'ᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾ', Q: 'ᴼ̴', RW: 'ᴿˢᵀᵁⱽᵂ', ap: 'ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖ', q: '٩', rz: 'ʳˢᵗᵘᵛʷˣʸᶻ', '09': '⁰¹²³⁴⁵⁶⁷⁸⁹' },
     box: { AZ: '🄰🄱🄲🄳🄴🄵🄶🄷🄸🄹🄺🄻🄼🄽🄾🄿🅀🅁🅂🅃🅄🅅🅆🅇🅈🅉' },
     plate: { AZ: '🅰🅱🅲🅳🅴🅵🅶🅷🅸🅹🅺🅻🅼🅽🅾🅿🆀🆁🆂🆃🆄🆅🆆🆇🆈🆉' },
     round: { AZ: 'ⒶⒷⒸⒹⒺⒻⒼⒽⒾⒿⓀⓁⓂⓃⓄⓅⓆⓇⓈⓉⓊⓋⓌⓍⓎⓏ', az: 'ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ', '09': '⓪①②③④⑤⑥⑦⑧⑨' },
@@ -1745,6 +1745,11 @@ I hope it works — firstly for me, and hopefully helps others.
               else if (/codemirror\.js/i.test(importEntry.importLocalPath)) {
                 processedContent = patchCodeMirror(processedContent);
               }
+              else if (/\bcodemirror\b/i.test(importEntry.importLocalPath)
+                && /\bcss\b/i.test(importEntry.importLocalPath)) {
+                processedContent = patchCodeMirrorCSS(processedContent);
+              }
+
               return '// #region ' + path.basename(importEntry.importLocalPath).replace(/\.js$/, '') + '\n' + processedContent + '\n' + '// #endregion';
             case '.css': return (
               '///// ' + path.basename(importEntry.importLocalPath) + ' /////\n' +
@@ -1779,7 +1784,7 @@ on(div, "touchstart", function () {
 })
         */ })
         )
-          
+
           .replace(
             getFunctionCommentContent(function() {/*
       on(d.scroller, "touchstart", function (e) {
@@ -1792,7 +1797,7 @@ on(div, "touchstart", function () {
         d.input.ensurePolled(true);
             */})
         )
-          
+
           .replace(
             getFunctionCommentContent(function() {/*
   ContentEditableInput.prototype.ensurePolled = function () {
@@ -1820,11 +1825,21 @@ on(div, "touchstart", function () {
       if (startPos !== endPos) return // do not force composition during selection
     }
           */ })
-          )
+        )
+
         );
 
         if (replacedText === libText) console.log('CodeMirror was not patched: version incompatible.');
         return replacedText;
+      }
+
+      function patchCodeMirrorCSS(libText) {
+        return (libText
+          .replace(
+            '"glyph-orientation-vertical", "text-anchor", "writing-mode",',
+            '"glyph-orientation-vertical", "text-anchor", "writing-mode"'
+          )
+        );
       }
 
       /** @param {string} filePath @param {string} content */
@@ -2647,7 +2662,13 @@ on(div, "touchstart", function () {
       if (typeof XMLHttpRequest === 'function') {
         var xhr = new XMLHttpRequest();
       } else if (typeof ActiveXObject === 'function') {
-        var xhr = /** @type {XMLHttpRequest} */(new ActiveXObject('Microsoft.XMLHTTP'));
+        try {
+          var xhr = /** @type {XMLHttpRequest} */(new ActiveXObject('MSXML2.XmlHttp'));
+          console.log('MSXML2.XmlHttp');
+        } catch (_versionError) {
+          var xhr = /** @type {XMLHttpRequest} */(new ActiveXObject('Microsoft.XMLHTTP'));
+          console.log('Microsoft.XMLHTTP');
+        }
       } else {
         return fetch(url, opts).then(function (response) {
           return response.text().then(function (text) {
@@ -2662,31 +2683,28 @@ on(div, "touchstart", function () {
       return new Promise(function (resolve, reject) {
         var capturedError;
         var handleResultDebounceTimeout;
-        xhr.onerror = function (err) {
-          capturedError = err;
-          clearTimeout(handleResultDebounceTimeout);
-          setTimeout(handleResult, 0);
-        };
-        xhr.onreadystatechange = function () {
-          if (xhr.readyState !== 4) return;
 
-          clearTimeout(handleResultDebounceTimeout);
-          setTimeout(handleResult, 0);
-        };
-
-        xhr.withCredentials = true;
         try {
+          console.log('open()...');
           xhr.open((opts.method || 'GET').toUpperCase(), url);
         } catch (error) {
           error.message += ' for ' + (opts.method || 'GET').toUpperCase() + ' at ' + url;
           throw error;
         }
 
+        console.log('withCredentials=...');
+        try { xhr.withCredentials = true; } catch (_assignmentError) { }
+        console.log('onerror=...');
+        try { xhr.onerror = handleOnerror; } catch (_assignmentError) { }
+        console.log('onreadystatechange=...');
+        xhr.onreadystatechange = handleOnreadystatechange;
+
         if (opts.headers) {
           for (var i = 0; i < opts.headers.entries.length; i++) {
             /** @type{[string, string]} */
             var entry = opts.headers.entries[i];
             try {
+              console.log('setRequestHeader()...');
               xhr.setRequestHeader(entry[0], entry[1]);
             } catch (headerSetError) {
               if (typeof console !== 'undefined' && console && typeof console.log === 'function')
@@ -2696,9 +2714,24 @@ on(div, "touchstart", function () {
         }
 
         if (opts.body) {
+          console.log('sned(body)...');
           xhr.send(/** @type {*} */(opts.body));
         } else {
+          console.log('send()...');
           xhr.send();
+        }
+
+        function handleOnerror(err) {
+          capturedError = err;
+          clearTimeout(handleResultDebounceTimeout);
+          setTimeout(handleResult, 0);
+        }
+
+        function handleOnreadystatechange() {
+          if (xhr.readyState !== 4) return;
+
+          clearTimeout(handleResultDebounceTimeout);
+          setTimeout(handleResult, 0);
         }
 
         function handleResult() {
@@ -6056,7 +6089,7 @@ on(div, "touchstart", function () {
           layoutElem.id = 'requestModeSidebar';
           layoutElem.style.cssText = 'transition: opacity 350ms; position: absolute; width: 100%; height: 100%;'
           layoutElem.innerHTML = '<button class=goButton></button>';
-          var goButton = /** @type {HTMLButtonElement} */(layoutElem.getElementsByClassName('goButton')[0]);
+          var goButton = /** @type {HTMLButtonElement} */(layoutElem.getElementsByTagName('button')[0]);
 
           return {
             container: layoutElem,
