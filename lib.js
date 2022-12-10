@@ -1,4 +1,4 @@
-// {build-by-hash:1wddsryhs3c Sat Dec 03 2022 16:09:49 GMT+0000 (Greenwich Mean Time) with  darwin/x64}
+// {build-by-hash:1ctqs24zohm Sat Dec 10 2022 10:00:54 GMT+0000 (Greenwich Mean Time) with  darwin/x64}
 // #region codemirror
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
 // Distributed under an MIT license: https://codemirror.net/5/LICENSE
@@ -8864,7 +8864,7 @@
       }
     });
 
-    on(div, "touchstart", () => {
+    on(div, "touchstart", function () {
   input.forceCompositionEnd(true)
   input.lastTap = +new Date()
 })

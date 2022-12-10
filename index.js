@@ -667,7 +667,7 @@ function catchREST() {
             text += range.plain;
             continue;
           } else {
-            applyFullModifiers = range.modifiers.filter(mod => mod !== modifier).join('');
+            applyFullModifiers = range.modifiers.filter(function (mod) { return mod !== modifier; }).join('');
           }
         } else {
           applyFullModifiers = range.modifiers.indexOf(modifier) < 0 ?
@@ -717,7 +717,7 @@ function catchREST() {
       var consequentEntry = parsed[parsed.length - 1];
     }
 
-    if (!parsed.length) return { text: '', start: start, end: start, parsed };
+    if (!parsed.length) return { text: '', start: start, end: start, parsed: parsed };
 
     // pick previous if this is punctuation or whitespace after formatted word
     if (typeof consequentEntry === 'string' && parsed && parsed.length > 1) {
@@ -1773,7 +1773,7 @@ I hope it works — firstly for me, and hopefully helps others.
 on(div, "touchstart", function () { return input.forceCompositionEnd(); });
         */}),
             getFunctionCommentContent(function () {/*
-on(div, "touchstart", () => {
+on(div, "touchstart", function () {
   input.forceCompositionEnd(true)
   input.lastTap = +new Date()
 })
@@ -6027,7 +6027,7 @@ on(div, "touchstart", () => {
                 if (!e) e = /** @type {MouseEvent} */(window.event);
                 if (e.preventDefault) e.preventDefault();
                 clearTimeout(clickTimeout);
-                clickTimeout = setTimeout(() => {
+                clickTimeout = setTimeout(function () {
                   executeSendRequestCommand();
                 }, 100);
               };
@@ -6078,7 +6078,7 @@ on(div, "touchstart", () => {
 
           return {
             container: layoutElem,
-            buttons
+            buttons: buttons
           };
 
           var btnPressedClassNameRegexp;
