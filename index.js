@@ -1749,6 +1749,10 @@ I hope it works — firstly for me, and hopefully helps others.
                 && /\bcss\b/i.test(importEntry.importLocalPath)) {
                 processedContent = patchCodeMirrorCSS(processedContent);
               }
+              else if (/\bcodemirror\b/i.test(importEntry.importLocalPath)
+                && /\bhtmlmixed\b/i.test(importEntry.importLocalPath)) {
+                processedContent = patchCodeMirrorHtmlMixed(processedContent);
+              }
 
               return '// #region ' + path.basename(importEntry.importLocalPath).replace(/\.js$/, '') + '\n' + processedContent + '\n' + '// #endregion';
             case '.css': return (
@@ -1836,8 +1840,17 @@ on(div, "touchstart", function () {
       function patchCodeMirrorCSS(libText) {
         return (libText
           .replace(
-            '"glyph-orientation-vertical", "text-anchor", "writing-mode",',
-            '"glyph-orientation-vertical", "text-anchor", "writing-mode"'
+            '"glyph-orientation-vertical", "text-anchor", "writing-mode",\n',
+            '"glyph-orientation-vertical", "text-anchor", "writing-mode"\n'
+          )
+        );
+      }
+
+      function patchCodeMirrorHtmlMixed(libText) {
+        return (libText
+          .replace(
+            'allowMissingTagName: parserConfig.allowMissingTagName,\n',
+            'allowMissingTagName: parserConfig.allowMissingTagName\n'
           )
         );
       }
@@ -2129,7 +2142,7 @@ on(div, "touchstart", function () {
                   var responseMsgJson = {
                     statusCode: response.statusCode,
                     statusMessage: response.statusMessage,
-                    headers: response.headers,
+                    headers: response.headers
                   };
                   if (response.body && response.body.length)
                     responseMsgJson.text = response.body.toString('utf8');

@@ -1,4 +1,4 @@
-// {build-by-hash:218dorddn5u Sat Dec 10 2022 14:18:07 GMT+0000 (Oge Mpaghara Greemwich Mean) with  darwin/x64}
+// {build-by-hash:2bd0rxofjcf Sat Dec 10 2022 14:52:09 GMT+0000 (Greenwich Mean Time) with  darwin/x64}
 // #region codemirror
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
 // Distributed under an MIT license: https://codemirror.net/5/LICENSE
@@ -13040,7 +13040,7 @@ CodeMirror.defineMode("css", function(config, parserConfig) {
       htmlMode: true,
       multilineTagIndentFactor: parserConfig.multilineTagIndentFactor,
       multilineTagIndentPastTag: parserConfig.multilineTagIndentPastTag,
-      allowMissingTagName: parserConfig.allowMissingTagName,
+      allowMissingTagName: parserConfig.allowMissingTagName
     });
 
     var tags = {};
