@@ -2677,10 +2677,8 @@ on(div, "touchstart", function () {
       } else if (typeof ActiveXObject === 'function') {
         try {
           var xhr = /** @type {XMLHttpRequest} */(new ActiveXObject('MSXML2.XmlHttp'));
-          console.log('MSXML2.XmlHttp');
         } catch (_versionError) {
           var xhr = /** @type {XMLHttpRequest} */(new ActiveXObject('Microsoft.XMLHTTP'));
-          console.log('Microsoft.XMLHTTP');
         }
       } else {
         return fetch(url, opts).then(function (response) {
@@ -2698,18 +2696,14 @@ on(div, "touchstart", function () {
         var handleResultDebounceTimeout;
 
         try {
-          console.log('open()...');
           xhr.open((opts.method || 'GET').toUpperCase(), url);
         } catch (error) {
           error.message += ' for ' + (opts.method || 'GET').toUpperCase() + ' at ' + url;
           throw error;
         }
 
-        console.log('withCredentials=...');
         try { xhr.withCredentials = true; } catch (_assignmentError) { }
-        console.log('onerror=...');
         try { xhr.onerror = handleOnerror; } catch (_assignmentError) { }
-        console.log('onreadystatechange=...');
         xhr.onreadystatechange = handleOnreadystatechange;
 
         if (opts.headers) {
@@ -2717,7 +2711,6 @@ on(div, "touchstart", function () {
             /** @type{[string, string]} */
             var entry = opts.headers.entries[i];
             try {
-              console.log('setRequestHeader()...');
               xhr.setRequestHeader(entry[0], entry[1]);
             } catch (headerSetError) {
               if (typeof console !== 'undefined' && console && typeof console.log === 'function')
@@ -2727,10 +2720,8 @@ on(div, "touchstart", function () {
         }
 
         if (opts.body) {
-          console.log('sned(body)...');
           xhr.send(/** @type {*} */(opts.body));
         } else {
-          console.log('send()...');
           xhr.send();
         }
 
@@ -2749,14 +2740,12 @@ on(div, "touchstart", function () {
 
         function handleResult() {
           if (xhr.status === 200) {
-            console.log(xhr);
             resolve({
               headers: {},
               body: typeof xhr.response === 'string' || xhr.response ? xhr.response : xhr.responseText
             });
           } else {
             if (capturedError) {
-              console.log('XHR error ', capturedError, xhr);
               if (!xhr.status && !capturedError.message)
                 reject('No access HTTP/' + xhr.status + (xhr.statusText ? ' ' + xhr.statusText : ''));
               else
@@ -2766,7 +2755,6 @@ on(div, "touchstart", function () {
                       '') + 'HTTP/' + xhr.status + ' ' + xhr.statusText);
             }
             else {
-              console.log('XHR error, object: ', xhr);
               reject('HTTP/' + xhr.status + ' ' + xhr.statusText);
             }
             // xhr.abort();
@@ -5472,12 +5460,13 @@ on(div, "touchstart", function () {
       function processToken(stream, state) {
         var startPos = stream.pos;
         var res = processTokenCore(stream, state);
-        console.log(
-          'token: ' +
-          (startPos > 0 ? '_' + stream.string.slice(0, startPos) + '_' : '_') +
-          res + ':"' + stream.string.slice(startPos, stream.pos) + '"' +
-          (stream.pos < stream.string.length ? '_' + stream.string.slice(stream.pos) + '_' : '_')
-        );
+        // if (typeof console !== 'undefined' && console && typeof console.log === 'function')
+        //   console.log(
+        //     'token: ' +
+        //     (startPos > 0 ? '_' + stream.string.slice(0, startPos) + '_' : '_') +
+        //     res + ':"' + stream.string.slice(startPos, stream.pos) + '"' +
+        //     (stream.pos < stream.string.length ? '_' + stream.string.slice(stream.pos) + '_' : '_')
+        //   );
 
         return res;
       }
@@ -5844,7 +5833,6 @@ on(div, "touchstart", function () {
           Array(useText.split('\n').length + 1)
             .join(',').split(',')
             .map(function (_, index) { return index + 1; }).join('<br>');
-        console.log('Loading..');
         layout.leftBottom.style.whiteSpace = 'nowrap';
         set(layout.leftBottom, drinkChar + ' Loading..');
       }
@@ -6293,9 +6281,6 @@ on(div, "touchstart", function () {
             var parsFirst = parseFirstLine(pars.firstLine);
           }
 
-          if (parsFirst) console.log('edited ', pars, ' url ', parsFirst);
-          else if (pars) console.log('edited ', pars);
-
           var detectedVerb = parsFirst && parsFirst.verb || 'edit';
 
           if (detectedVerb !== verb) {
@@ -6465,8 +6450,6 @@ on(div, "touchstart", function () {
             ) + 'ing';
 
           set(withSplitter.splitterMainPanel, verbContinuousTense + '...');
-
-          console.log('executeSendRequestCommand ', pars, parsFirst);
 
           var startTime = getTimeNow();
           var ftc = fetchXHR(normalizedUrl, {
@@ -6819,7 +6802,9 @@ Send this to test?
           }, 100);
         }
 
-        console.log('drive loaded ', drive);
+        if (typeof console !== 'undefined' && console && typeof console.log === 'function')
+          console.log('drive loaded ', drive);
+
         var completed = false;
 
         function docLoadedCheckDependenciesAgain() {
