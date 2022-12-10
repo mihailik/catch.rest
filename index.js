@@ -834,7 +834,7 @@ function catchREST() {
 
           var rangeCount = rangeDesc.length === 1 ? 1 : rangeDesc.charCodeAt(1) - rangeDesc.charCodeAt(0) + 1;
           var formattedWidth = rangeChars.length / rangeCount;
-          for (let i = 0; i < rangeCount; i++) {
+          for (var i = 0; i < rangeCount; i++) {
             var ascii = String.fromCharCode(rangeDesc.charCodeAt(0) + i);
             var rangeCh = rangeChars.slice(i * formattedWidth, (i + 1) * formattedWidth);
             var entry = {
@@ -972,7 +972,7 @@ function catchREST() {
       var modifierDict = {};
 
       formattedRegex.lastIndex = 0;
-      let index = 0;
+      var index = 0;
       while (true) {
         formattedRegex.lastIndex = index;
         var match = formattedRegex.exec(text);
