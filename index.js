@@ -1127,7 +1127,7 @@ body {
   font-weight: 300;
 }
 #shell .CodeMirror-linenumber {
-  min-width: 5em;
+  min-width: 4em;
 }
 
 #shell #contentPageHost {
@@ -1233,7 +1233,7 @@ body {
   border-radius: 100%;
   width: 4em;
   height: 4em;
-  margin-top: 3em;
+  margin-top: 1em;
   margin-left: 0.6em;
   border: solid 1px #870000;
   background: #f5adad;
@@ -1253,6 +1253,8 @@ body {
 
   / * Internet Explorer 10+ * /
   -ms-overflow-style: none;
+
+  padding-top: 0.2em;
 }
 #shell #editorModeSidebar::-webkit-scrollbar {
   / * WebKit * /
@@ -1265,7 +1267,7 @@ body {
   width: 7em;
   height: 7em;
   margin-top: 0.5em;
-  margin-left: 1.3em;
+  margin-left: 0.8em;
   border: solid 1px #4a739f;
   background: #b5dbe0;
   box-shadow: inset 2px 2px 3px white, inset -2px -2px 3px #327285, 3px 3px 8px #00405c;
@@ -1388,7 +1390,7 @@ Wait, formatting for {bolditalic:plain text}??
 
 Oh yes, wicked Unicode magic.
 
-*Ka chi fo!*
+*{cursive:Ka chi fo}!*
 
   */}).replace(/\{([a-z]+)\:([^\}]+)\}/g, function (_str, modifier, text) { return applyModifier(text, modifier); });
 
