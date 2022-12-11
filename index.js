@@ -6086,7 +6086,7 @@ on(div, "touchstart", function () {
             return bt;
           }
 
-          var tab = bt.tabs.addTab({ accent: 'silver', label: 'Raw' });
+          var tab = bt.tabs.addTab({ accent: 'silver', label: 'Reply' });
           var cm =
             //@ts-ignore
             CodeMirror(
