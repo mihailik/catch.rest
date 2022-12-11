@@ -6213,7 +6213,7 @@ on(div, "touchstart", function () {
             var top = editor.charCoords({ line: 0, ch: 1 }).top;
             var bottom = editor.charCoords({ line: doc.lineCount(), ch: 1 }).bottom;
             var contentHeight = bottom - top;
-            var gapHeight = scrollInfo.clientHeight > contentHeight ? scrollInfo.clientHeight - contentHeight : void 0;
+            var gapHeight = scrollInfo.clientHeight > contentHeight ? scrollInfo.clientHeight - contentHeight + 40 : void 0;
             var gapHeightStr = (gapHeight || 0) + 'px';
             if (lastLineEntry.linedPaperElem.style.height != gapHeightStr) {
               lastLineEntry.linedPaperElem.style.height = gapHeightStr;
