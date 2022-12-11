@@ -6696,9 +6696,7 @@ on(div, "touchstart", function () {
           if (editorPos < 0) return;
           var nextCm = tabBetweenEditors[(editorPos + 1) % tabBetweenEditors.length];
 
-          if (nextCm === cm) {
-            return true;
-          }
+          if (nextCm === cm) return;
 
           var cursorCoordPos = cm.cursorCoords();
           var nextCursorCoordPos = nextCm.cursorCoords();
