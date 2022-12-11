@@ -6723,7 +6723,8 @@ on(div, "touchstart", function () {
               'transition: transform ' + animationMsec + 'ms ease-in, opacity '+ animationMsec + 'ms; ' +
               'background: black; ' +
               'border: solid 1px rgba(255,255,255,0.5); ' +
-              'z-index: 2000; ';
+              'z-index: 2000; ' +
+              'pointer-events: none; ';
 
             document.body.appendChild(elem);
             var currentFlying = flyingCursor = {
@@ -6739,7 +6740,8 @@ on(div, "touchstart", function () {
                     'scale(4)';
                   elem.style.opacity = '0';
                   currentFlying.timeout = setTimeout(function () {
-                    document.body.removeChild(currentFlying.elem);
+                    if (currentFlying && currentFlying.elem.parentElement)
+                      currentFlying.elem.parentElement.removeChild(currentFlying.elem);
                     flyingCursor = void 0;
                   }, animationMsec * 0.9);
                 }, animationMsec + 5);
