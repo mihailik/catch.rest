@@ -6726,20 +6726,20 @@ on(div, "touchstart", function () {
               'z-index: 2000; ';
 
             document.body.appendChild(elem);
-            flyingCursor = {
+            var currentFlying = flyingCursor = {
               elem: elem,
               timeout: /** @type {*} */(setTimeout(function () {
                 elem.style.transform =
                   'translate(' + (nextCursorCoordPos.left - cursorCoordPos.left - 1) + 'px, ' + (nextCursorCoordPos.top - cursorCoordPos.top) + 'px) ' +
                   'scale(1.3)';
                 elem.style.opacity = '0.9';
-                flyingCursor.timeout = setTimeout(function () {
+                currentFlying.timeout = setTimeout(function () {
                   elem.style.transform =
                     'translate(' + (nextCursorCoordPos.left - cursorCoordPos.left - 1) + 'px, ' + (nextCursorCoordPos.top - cursorCoordPos.top) + 'px) ' +
                     'scale(4)';
                   elem.style.opacity = '0';
-                  flyingCursor.timeout = setTimeout(function () {
-                    document.body.removeChild(flyingCursor.elem);
+                  currentFlying.timeout = setTimeout(function () {
+                    document.body.removeChild(currentFlying.elem);
                     flyingCursor = void 0;
                   }, animationMsec * 0.9);
                 }, animationMsec + 5);
