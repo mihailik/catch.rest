@@ -6706,7 +6706,7 @@ on(div, "touchstart", function () {
           if (cursorCoordPos && nextCursorCoordPos) {
             if (flyingCursor) {
               clearTimeout(flyingCursor.timeout);
-              if (flyingCursor.elem.parentElement) flyingCursor.elem.parentElement.removeChild(flyingCursor.elem.parentElement);
+              if (flyingCursor.elem.parentElement) flyingCursor.elem.parentElement.removeChild(flyingCursor.elem);
               flyingCursor = undefined;
             }
 
