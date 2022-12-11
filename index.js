@@ -5798,7 +5798,7 @@ on(div, "touchstart", function () {
       /** @type {TabEntry[]} */
       var tabEntryList = [];
 
-      var animationMsec = 300;
+      var animationMsec = 200;
 
       return tabsObject;
 
