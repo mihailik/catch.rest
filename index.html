@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<!-- {build-by-hash:1zgt5j808xb Sun Dec 11 2022 12:53:26 GMT+0000 (Greenwich Mean Time) with  darwin/x64} -->
+<!-- {build-by-hash:es06bbuooe Sun Dec 11 2022 13:38:22 GMT+0000 (Greenwich Mean Time) with  darwin/x64} -->
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -172,15 +172,24 @@ body {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
   display: inline-block;
-  background: linear-gradient(to right, currentColor -300%, transparent 400%);
+  background: linear-gradient(to right, currentColor -50%, transparent 400%);
   box-shadow: -4px -3px 40px black;
   cursor: pointer;
   margin-right: 0.8em;
 }
 
+#shell .tabs-headers-container .tab-header .tab-label {
+  color: white;
+  text-shadow: -1px -1px 2px #00000054
+}
+
 #shell .tabs-headers-container .tab-header.inactive {
   transform: translateY(0.4em);
   opacity: 0.7;
+}
+
+#shell .tabs-headers-container .tab-header.inactive .tab-label {
+  transform: translateY(-0.15em);
 }
 
 #shell .CodeMirror-guttermarker-subtle {
@@ -307,7 +316,7 @@ body {
 #shell #editorModeSidebar button.pressed .mod-button-content {
   transform: translate(2px, 2px);
 }
-.cssAuthenticityMarker{font: inherit; /* {hex:29u604y9s7h} */}
+.cssAuthenticityMarker{font: inherit; /* {hex:nruxwq0ct8} */}
 </style>
 </head><body><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto Sans Math">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto Sans">

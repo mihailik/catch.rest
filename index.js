@@ -1167,15 +1167,24 @@ body {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
   display: inline-block;
-  background: linear-gradient(to right, currentColor -300%, transparent 400%);
+  background: linear-gradient(to right, currentColor -50%, transparent 400%);
   box-shadow: -4px -3px 40px black;
   cursor: pointer;
   margin-right: 0.8em;
 }
 
+#shell .tabs-headers-container .tab-header .tab-label {
+  color: white;
+  text-shadow: -1px -1px 2px #00000054
+}
+
 #shell .tabs-headers-container .tab-header.inactive {
   transform: translateY(0.4em);
   opacity: 0.7;
+}
+
+#shell .tabs-headers-container .tab-header.inactive .tab-label {
+  transform: translateY(-0.15em);
 }
 
 #shell .CodeMirror-guttermarker-subtle {
@@ -5946,7 +5955,7 @@ on(div, "touchstart", function () {
       function populateHostDOM(host) {
         host.innerHTML = getFunctionCommentContent(function () {/*
         <table style="width: 100%; height: 100%; spacing: 0; padding: 0;" cellspacing=0 cellpadding=0>
-        <tr><td height=1 style="height: 1px; padding-left: 7em; padding-top: 1em;"><div class=tabs-headers-container style="position: relative"></div></td></tr>
+        <tr><td height=1 style="height: 1px; padding-left: 7em; padding-top: 1.5em;"><div class=tabs-headers-container style="position: relative"></div></td></tr>
         <tr><td height="99%" class=tabs-contents-container style="position: relative">
         </td></tr></table>
       */});
@@ -6204,10 +6213,10 @@ on(div, "touchstart", function () {
           }
 
           var div = document.createElement('div');
-          div.style.cssText = 'position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; color: tomato;';
+          div.style.cssText = 'position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; color: tomato; margin-left: 6.1em';
 
           var structuredReply = {
-            tab: bt.tabs.addTab({ accent: 'cyan', label: 'Data' }),
+            tab: bt.tabs.addTab({ accent: '#02cccc', label: 'Data' }),
             div: div
           };
           structuredReply.tab.content.appendChild(div);
