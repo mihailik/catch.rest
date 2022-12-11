@@ -1147,7 +1147,7 @@ body {
 }
 
 #shell #contentPageHost #splitter {
-  box-shadow: 1em -0.3em 0.7em rgba(0,0,0, 0.11);
+  box-shadow: 1em 0.2em 0.7em rgb(0 0 0 / 68%);
   padding-left: 0.6em;
   cursor: ns-resize;
 }
@@ -1155,6 +1155,27 @@ body {
 #shell #contentPageHost #splitterLabel {
   padding-left: 1em;
   color: #98e0e9;
+}
+
+#shell .tabs-headers-container .tab-header {
+  border: solid 1px currentColor;
+  border-radius: 0.7em;
+  border-bottom: none;
+  padding: 1em;
+  padding-top: 0.5em;
+  padding-bottom: 0.35em;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  display: inline-block;
+  background: linear-gradient(to right, currentColor -300%, transparent 400%);
+  box-shadow: -4px -3px 40px black;
+  cursor: pointer;
+  margin-right: 0.8em;
+}
+
+#shell .tabs-headers-container .tab-header.inactive {
+  transform: translateY(0.4em);
+  opacity: 0.7;
 }
 
 #shell .CodeMirror-guttermarker-subtle {
@@ -5742,6 +5763,11 @@ on(div, "touchstart", function () {
       }
     }
 
+    /** @typedef{{
+     *  label: HTMLElement;
+     *  content: HTMLElement;
+     * }} TabController */
+
     /**
      * @param {{
      *  host: HTMLElement;
@@ -5749,11 +5775,9 @@ on(div, "touchstart", function () {
      */
     function createTabs(options) {
       var host = options.host;
-      // host.innerHTML = getFunctionCommentContent(function () {/*
-      //   <div>
-      //   </div>
-      // */});
+      var containers = populateHostDOM(host);
 
+      /** @type {TabEntry | undefined} */
       var currentTab;
 
       var tabsObject = {
@@ -5764,13 +5788,17 @@ on(div, "touchstart", function () {
       };
 
       /** @typedef {{
+       *  controller: TabController;
        *  accent: string;
+       *  headerElem: HTMLElement;
        *  labelElem: HTMLElement;
        *  contentElem: HTMLElement;
        * }} TabEntry */
 
       /** @type {TabEntry[]} */
       var tabEntryList = [];
+
+      var animationMsec = 300;
 
       return tabsObject;
 
@@ -5781,27 +5809,172 @@ on(div, "touchstart", function () {
        * }} tabOptions 
        */
       function addTab(tabOptions) {
+        var headerElem = document.createElement('div');
+        headerElem.style.color = tabOptions.accent;
+        headerElem.style.transition = 'transform ' + animationMsec + 'ms';
+        headerElem.className = 'tab-header';
         var labelElem = document.createElement('div');
+        labelElem.className = 'tab-label';
+        set(labelElem, tabOptions.label);
+        headerElem.appendChild(labelElem);
         var contentElem = document.createElement('div');
+        contentElem.className = 'tab-content';
+        contentElem.style.cssText = 'position: absolute; left: 0; top: 0; width: 100%; height: 100%;';
+        containers.tabsHeadersContainer.appendChild(headerElem);
+        containers.tabsContentsContainer.appendChild(contentElem);
 
         /** @type {TabEntry} */
         var tabEntry = {
+          controller: { label: labelElem, content: contentElem },
           accent: tabOptions.accent,
+          headerElem: headerElem,
           labelElem: labelElem,
           contentElem: contentElem
         };
 
         tabEntryList.push(tabEntry);
 
-        return tabEntry;
+        switchToTab(tabEntry.controller);
+
+        headerElem.ontouchstart = onClick;
+        headerElem.onmousedown = onClick;
+        headerElem.onclick = onClick;
+        return tabEntry.controller;
+
+        /** @param {Event} e */
+        function onClick(e) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          if (typeof e.stopImmediatePropagation === 'function') e.stopPropagation();
+          if ('cancelBubble' in e) e.cancelBubble = true;
+
+          switchToTabEntry(tabEntry);
+        }
       }
 
       function getCurrentTab() {
-        return currentTab;
+        return currentTab && currentTab.controller;
       }
 
+      var animateTimeout;
+      /** @type {Function | undefined} */
+      var completeAnimation;
+
+      /** @param {TabEntry} toTab */
+      function switchToTabEntry(toTab) {
+        if (currentTab === toTab) return;
+
+        clearTimeout(animateTimeout);
+        if (completeAnimation) {
+          completeAnimation();
+          completeAnimation = void 0;
+        }
+
+        if (currentTab) {
+          var fromTab = currentTab;
+          fromTab.headerElem.className = (fromTab.headerElem.className || '').replace(/(^|\s)active($|\s)/g, ' ').replace(/\s+$/, '') + ' inactive';
+
+          fromTab.contentElem.style.transition = 'none';
+          toTab.contentElem.style.transition = 'none';
+
+          completeAnimation = function () {
+            fromTab.contentElem.style.transition = 'none';
+            fromTab.contentElem.style.display = 'none';
+            fromTab.contentElem.style.opacity = '0';
+            fromTab.contentElem.style.zIndex = '1';
+            fromTab.contentElem.style.pointerEvents = 'none';
+
+            toTab.contentElem.style.display = '';
+            toTab.contentElem.style.opacity = '1';
+            toTab.contentElem.style.zIndex = '10';
+            toTab.contentElem.style.pointerEvents = 'all';
+            completeAnimation = void 0;
+          };
+
+          animateTimeout = setTimeout(function () {
+            fromTab.contentElem.style.opacity = '1';
+            fromTab.contentElem.style.zIndex = '9';
+
+            toTab.contentElem.style.opacity = '0';
+            toTab.contentElem.style.zIndex = '10';
+
+            fromTab.contentElem.style.pointerEvents = 'none';
+            toTab.contentElem.style.pointerEvents = 'all';
+
+            fromTab.contentElem.style.display = '';
+            toTab.contentElem.style.display = '';
+
+            animateTimeout = setTimeout(function () {
+              fromTab.contentElem.style.transition = 'opacity ' + animationMsec + 'ms, trasform ' + Math.floor(animationMsec/2) + 'ms';
+              toTab.contentElem.style.transition = 'opacity ' + animationMsec + 'ms, trasform ' + Math.floor(animationMsec/2) + 'ms';
+
+              animateTimeout = setTimeout(function () {
+                toTab.contentElem.style.opacity = '1';
+
+                animateTimeout = setTimeout(function () {
+                  fromTab.contentElem.style.transition = 'none';
+                  toTab.contentElem.style.transition = 'none';
+
+                  animateTimeout = setTimeout(/** @type {Function} */(completeAnimation), 1);
+                }, animationMsec + 10);
+              }, 1);
+            }, 1);
+          }, 1);
+        } else {
+          toTab.contentElem.style.zIndex = '10';
+        }
+
+        toTab.headerElem.className = (toTab.headerElem.className || '').replace(/(^|\s)inactive($|\s)/g, ' ').replace(/\s+$/, '') + ' active';
+        currentTab = toTab;
+      }
+
+      /** @param {TabController} tabController */
+      function findTabEntryForTabController(tabController) {
+        for (var i = 0; i < tabEntryList.length; i++) {
+          if (tabEntryList[i].controller === tabController) return tabEntryList[i];
+        }
+      }
+
+      /** @param {TabController} tab */
       function switchToTab(tab) {
-        //
+        var tabEntry = findTabEntryForTabController(tab);
+        if (!tabEntry) throw new Error('Tab is not found');
+
+        return switchToTabEntry(tabEntry);
+      }
+
+      /** @param {HTMLElement} host */
+      function populateHostDOM(host) {
+        host.innerHTML = getFunctionCommentContent(function () {/*
+        <table style="width: 100%; height: 100%; spacing: 0; padding: 0;" cellspacing=0 cellpadding=0>
+        <tr><td height=1 style="height: 1px; padding-left: 7em; padding-top: 1em;"><div class=tabs-headers-container style="position: relative"></div></td></tr>
+        <tr><td height="99%" class=tabs-contents-container style="position: relative">
+        </td></tr></table>
+      */});
+
+        /** @type {HTMLElement} */
+        var tabsHeadersContainer;
+        /** @type {HTMLElement} */
+        var tabsContentsContainer;
+
+        var elemLists = ['td', 'div'];
+        for (var iElem = 0; iElem < elemLists.length; iElem++) {
+          var allElems = host.getElementsByTagName(elemLists[iElem]);
+          for (var i = 0; i < allElems.length; i++) {
+            var child = /** @type {HTMLElement} */(allElems[i]);
+            if (!child) continue;
+            switch (child.className) {
+              case 'tabs-headers-container': tabsHeadersContainer = child; break;
+              case 'tabs-contents-container': tabsContentsContainer = child; break;
+            }
+          }
+        }
+
+        return {
+          // @ts-ignore
+          tabsHeadersContainer: tabsHeadersContainer,
+          // @ts-ignore
+          tabsContentsContainer: tabsContentsContainer
+        };
       }
     }
 
@@ -5857,7 +6030,7 @@ on(div, "touchstart", function () {
         var tabBetweenEditors = [];
 
         var addedCommands = /** @type {import('codemirror').KeyMap} */ ({
-          Tab: executeTabCommand,
+          Tab: executeTabKeyCommand,
           'Ctrl-Enter': executeSendRequestCommand,
           'Cmd-Enter': executeSendRequestCommand,
           'Ctrl-B': executeApplyBoldModifierCommand,
@@ -5926,15 +6099,123 @@ on(div, "touchstart", function () {
 
         addLinedPaperHandling(editor);
 
-        /** @type {ReturnType<typeof requireSplitter>} */
-        var withSplitter;
-        /** @type {import('codemirror').Editor} */
-        var replyEditor;
-
         /** @type {ReturnType<typeof createRequestVerbSidebarLayout>} */
         var requestVerbSidebarLayout;
         /** @type {ReturnType<typeof createPlainTextSidebarLayout>} */
         var plainTextSidebarLayout;
+
+        /** @type {{
+         *  withSplitter: ReturnType<typeof requireSplitter>;
+         *  tabs?: ReturnType<typeof createTabs>;
+         *  rawReply?: {
+         *    editor: import('codemirror').Editor;
+         *    tab: TabController;
+         *  };
+         *  structuredReply?: {
+         *    tab: TabController;
+         *    div: HTMLElement; 
+         *  }
+         * } | undefined} */
+        var _bottomDetailsInstance;
+        function getBottomDetails() {
+          if (!_bottomDetailsInstance) {
+            _bottomDetailsInstance = {
+              withSplitter: requireSplitter()
+            };
+          }
+
+          return _bottomDetailsInstance;
+        }
+
+        // @ts-ignore
+        /** @template T, K @typedef{Omit<T, K> & {[P in K]: NonNullable<T[P]>}} WithNonNullable */
+
+        function isBottomDetailsInstantiated() {
+          return /** @type {unknown} */_bottomDetailsInstance;
+        }
+
+        function getBottomDetailsWithTabs() {
+          var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetails>, 'tabs'>} */(
+            getBottomDetails());
+          if (bt.tabs) return bt;
+
+          bt.tabs = createTabs({ host: bt.withSplitter.bottomHost });
+          return bt;
+        }
+
+        /** @param {string=} text */
+        function getBottomDetailsWithRawReply(text) {
+          var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetailsWithTabs>, 'rawReply'>} */(
+            getBottomDetailsWithTabs());
+          if (bt.rawReply) {
+            if (typeof text === 'string') bt.rawReply.editor.setValue(text);
+            return bt;
+          }
+
+          var tab = bt.tabs.addTab({ accent: 'silver', label: 'Raw' });
+          var cm =
+            //@ts-ignore
+            CodeMirror(
+              tab.content,
+              {
+                value: text || '',
+
+                mode: 'javascript',
+
+                // @ts-ignore
+                foldGutter: true,
+                gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+                extraKeys: {
+                  Tab: executeTabKeyCommand
+                },
+
+                lineNumbers: true,
+                readOnly: true,
+                lineWrapping: true
+              });
+          var copyFocus = cm.focus.bind(cm);
+          cm.focus = function () {
+            copyFocus();
+            bt.tabs.switchToTab(tab);
+            setTimeout(function () {
+              copyFocus();
+            }, 10);
+          };
+
+          tabBetweenEditors.push(cm);
+
+          addLinedPaperHandling(cm);
+
+          var rawReply = {
+            editor: cm,
+            tab: tab
+          };
+          bt.rawReply = rawReply;
+
+          return bt;
+        }
+
+        function getBottomDetailsWithStructuredReply() {
+          var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetailsWithRawReply>, 'structuredReply'>} */(
+            getBottomDetailsWithRawReply());
+          if (bt.structuredReply) {
+            bt.tabs.switchToTab(bt.structuredReply.tab);
+            return bt;
+          }
+
+          var div = document.createElement('div');
+          div.style.cssText = 'position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; color: tomato;';
+
+          var structuredReply = {
+            tab: bt.tabs.addTab({ accent: 'cyan', label: 'Data' }),
+            div: div
+          };
+          structuredReply.tab.content.appendChild(div);
+          bt.structuredReply = structuredReply;
+
+          return bt;
+        }
+
 
         /** @param {import('codemirror').Editor} editor */
         function addLinedPaperHandling(editor) {
@@ -6041,7 +6322,7 @@ on(div, "touchstart", function () {
               requestVerbSidebarLayout.container.style.pointerEvents = 'none';
               requestVerbSidebarLayout.container.style.opacity = '0';
             }
-            if (withSplitter) {
+            if (isBottomDetailsInstantiated()) {
               // retain?
             }
 
@@ -6398,7 +6679,7 @@ on(div, "touchstart", function () {
         function executeApplyUnderlinedModifierCommand() { return applyModifierCommand('underlined'); }
 
         /** @param {import('codemirror').Editor} cm */
-        function executeTabCommand(cm) {
+        function executeTabKeyCommand(cm) {
           var editorPos = tabBetweenEditors.indexOf(cm);
           if (editorPos < 0) return;
           var nextCm = tabBetweenEditors[(editorPos + 1) % tabBetweenEditors.length];
@@ -6414,7 +6695,10 @@ on(div, "touchstart", function () {
           if (!parsFirst || !parsFirst.url) return;
 
           editor.setOption('readOnly', true);
-          if (!withSplitter) withSplitter = requireSplitter();
+          var bt = getBottomDetails();
+          if (bt.tabs && bt.rawReply) {
+            bt.tabs.switchToTab(bt.rawReply.tab);
+          }
 
           var normalizedUrl = parsFirst.url;
           if (!/^(\/|\.|http|https):/i.test(normalizedUrl)) {
@@ -6449,7 +6733,7 @@ on(div, "touchstart", function () {
                 ''
             ) + 'ing';
 
-          set(withSplitter.splitterMainPanel, verbContinuousTense + '...');
+          set(getBottomDetails().withSplitter.splitterMainPanel, verbContinuousTense + '...');
 
           var startTime = getTimeNow();
           var ftc = fetchXHR(normalizedUrl, {
@@ -6467,69 +6751,23 @@ on(div, "touchstart", function () {
               var headers = response.headers;
               var text = response.body;
               editor.setOption('readOnly', false);
-              set(withSplitter.splitterMainPanel, 'Done: ' + (replyTime / 1000) + 's.');
+              set(getBottomDetails().withSplitter.splitterMainPanel, 'Done: ' + (replyTime / 1000) + 's.');
 
-              if (!replyEditor) {
-                replyEditor = createReplyCodeMirror(
-                  withSplitter.bottomHost,
-                  text
-                );
-              } else {
-                replyEditor.setValue(text);
-              }
+              var bt = getBottomDetailsWithRawReply(text);
 
             },
             function (err) {
               var replyTime = getTimeNow() - startTime;
 
               editor.setOption('readOnly', false);
-              set(withSplitter.splitterMainPanel, 'Failed: ' + (replyTime / 1000) + 's.');
-              if (!replyEditor) {
-                replyEditor = createReplyCodeMirror(
-                  withSplitter.bottomHost,
-                  err.message || String(err)
-                );
-              } else {
-                replyEditor.setValue(String(err.message || err));
-              }
+              var bt = getBottomDetailsWithStructuredReply();
+              bt.rawReply.editor.setValue('');
+              set(bt.structuredReply.div, err.message || String(err));
+              set(bt.withSplitter.splitterMainPanel, 'Failed: ' + (replyTime / 1000) + 's.');
             }
           );
 
           return true;
-
-          /**
-           * @param {HTMLElement} host
-           * @param {string} initalValue
-           * @returns {import('codemirror').Editor}
-           */
-          function createReplyCodeMirror(host, initalValue) {
-            var cm =
-              //@ts-ignore
-              CodeMirror(
-                host,
-                {
-                  value: initalValue,
-
-                  mode: 'javascript',
-
-                  // @ts-ignore
-                  foldGutter: true,
-                  gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
-                  extraKeys: {
-                    Tab: executeTabCommand
-                  },
-
-                  lineNumbers: true,
-                  readOnly: true,
-                  lineWrapping: true
-                });
-
-            tabBetweenEditors.push(cm);
-
-            addLinedPaperHandling(cm);
-
-            return cm;
-          }
         }
       }
 
