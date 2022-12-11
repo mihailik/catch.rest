@@ -6687,11 +6687,66 @@ on(div, "touchstart", function () {
         function executeApplyTypewriterModifierCommand() { return applyModifierCommand('typewriter'); }
         function executeApplyUnderlinedModifierCommand() { return applyModifierCommand('underlined'); }
 
+        /** @type {{timeout: number, elem: HTMLElement} | undefined} */
+        var flyingCursor;
+
         /** @param {import('codemirror').Editor} cm */
         function executeTabKeyCommand(cm) {
           var editorPos = tabBetweenEditors.indexOf(cm);
           if (editorPos < 0) return;
           var nextCm = tabBetweenEditors[(editorPos + 1) % tabBetweenEditors.length];
+
+          if (nextCm === cm) {
+            return true;
+          }
+
+          var cursorCoordPos = cm.cursorCoords();
+          var nextCursorCoordPos = nextCm.cursorCoords();
+
+          if (cursorCoordPos && nextCursorCoordPos) {
+            if (flyingCursor) {
+              clearTimeout(flyingCursor.timeout);
+              if (flyingCursor.elem.parentElement) flyingCursor.elem.parentElement.removeChild(flyingCursor.elem.parentElement);
+              flyingCursor = undefined;
+            }
+
+            var animationMsec = 200;
+
+            // animate some movement
+            var elem = document.createElement('div');
+            elem.style.cssText =
+              'position: fixed; ' +
+              'left: ' + cursorCoordPos.left + 'px; ' +
+              'top: ' + cursorCoordPos.top  + 'px; ' +
+              'width: 2px; ' +
+              'height: ' + (cursorCoordPos.bottom - cursorCoordPos.top) + 'px; ' +
+              'transition: transform ' + animationMsec + 'ms ease-in, opacity '+ animationMsec + 'ms; ' +
+              'background: black; ' +
+              'border: solid 1px rgba(255,255,255,0.5); ' +
+              'z-index: 2000; ';
+
+            document.body.appendChild(elem);
+            flyingCursor = {
+              elem: elem,
+              timeout: /** @type {*} */(setTimeout(function () {
+                elem.style.transform =
+                  'translate(' + (nextCursorCoordPos.left - cursorCoordPos.left - 1) + 'px, ' + (nextCursorCoordPos.top - cursorCoordPos.top) + 'px) ' +
+                  'scale(1.3)';
+                elem.style.opacity = '0.9';
+                flyingCursor.timeout = setTimeout(function () {
+                  elem.style.transform =
+                    'translate(' + (nextCursorCoordPos.left - cursorCoordPos.left - 1) + 'px, ' + (nextCursorCoordPos.top - cursorCoordPos.top) + 'px) ' +
+                    'scale(4)';
+                  elem.style.opacity = '0';
+                  flyingCursor.timeout = setTimeout(function () {
+                    document.body.removeChild(flyingCursor.elem);
+                    flyingCursor = void 0;
+                  }, animationMsec * 0.9);
+                }, animationMsec + 5);
+              }, 1))
+            };
+          }
+
           nextCm.focus();
         }
 
