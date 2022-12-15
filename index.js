@@ -2230,7 +2230,7 @@ on(div, "touchstart", function () {
                     statusMessage: response.statusMessage,
                     headers: response.headers
                     // try to retain the exact shape of the response
-                  }, null, 2).replace(/}$/, '  "json": ' + response.body.toString('utf8') + '\n}');
+                  }, null, 2).replace(/\s*}$/, ',\n  "json": ' + response.body.toString('utf8') + '\n}');
                 } else {
                   var responseMsgJson = {
                     statusCode: response.statusCode,
@@ -2239,7 +2239,7 @@ on(div, "touchstart", function () {
                   };
                   if (response.body && response.body.length)
                     responseMsgJson.text = response.body.toString('utf8');
-                  
+
                   var responseText = JSON.stringify(responseMsgJson, null, 2);
                 }
 
@@ -2287,7 +2287,10 @@ on(div, "touchstart", function () {
                 return new Promise(function (resolve, reject) {
                   var request = http.request(
                     options.url,
-                    { headers: options.headers },
+                    {
+                      method: options.method,
+                      headers: options.headers
+                    },
                     function (response) {
                       var responseDataBufs = [];
                       response.on('data', onResponseData);
@@ -6997,8 +7000,33 @@ on(div, "touchstart", function () {
 
           set(getBottomDetails().withSplitter.splitterMainPanel, verbContinuousTense + '...');
 
+          var useProxy = typeof location !== 'undefined' && ['localhost', '127.0.0.1'].indexOf((location.hostname || '').toLowerCase()) >= 0;
+          var fetchXHROverride = !useProxy ? fetchXHR : function (normalizedUrl, options) {
+            return fetchXHR(
+              location.protocol + '//' + location.host + '/xhr',
+              {
+                method: 'POST',
+                body: JSON.stringify({
+                  url: normalizedUrl,
+                  // headers: options.headers,
+                  body: options.body,
+                  method: (options.method || 'GET').toUpperCase()
+                })
+              }
+            ).then(function (response) {
+              try {
+                var responseBody = JSON.parse(response.body);
+                if (responseBody.json) responseBody.body = JSON.stringify(responseBody.json, null, 2);
+                else responseBody.body = responseBody.text;
+                return responseBody;
+              } catch (error) {
+                return response;
+              }
+            });
+          };
+
           var startTime = getTimeNow();
-          var ftc = fetchXHR(normalizedUrl, {
+          var ftc = fetchXHROverride(normalizedUrl, {
             method: parsFirst.verb,
             // @ts-ignore
             withCredentials: true,
@@ -7047,18 +7075,23 @@ on(div, "touchstart", function () {
                     };
                     var ls = ts.createLanguageService(host);
                     var replyFilename =
-                      /^\s*\{/.test(text) && /\}\s*$/.test(text) ?  'reply.json' : 'reply.js';
-                    var fmts = ls.getFormattingEditsForDocument(replyFilename, {
-                      ConvertTabsToSpaces: true,
-                      convertTabsToSpaces: true,
-                      IndentSize: 2,
-                      indentSize: 2,
-                      IndentStyle: ts.IndentStyle.Smart,
-                      TabSize: 2,
-                      tabSize: 2,
-                      trimTrailingWhitespace: true,
-                      semicolons: ts.SemicolonPreference.Ignore
-                    });
+                      /^\s*\{/.test(text) && /\}\s*$/.test(text) ? 'reply.json' : 'reply.js';
+
+                    try {
+                      var fmts = ls.getFormattingEditsForDocument(replyFilename, {
+                        ConvertTabsToSpaces: true,
+                        convertTabsToSpaces: true,
+                        IndentSize: 2,
+                        indentSize: 2,
+                        IndentStyle: ts.IndentStyle.Smart,
+                        TabSize: 2,
+                        tabSize: 2,
+                        trimTrailingWhitespace: true,
+                        semicolons: ts.SemicolonPreference.Ignore
+                      });
+                    } catch (tsError) {
+                      fmts = [];
+                    }
 
                     var fmtsFromEnd = fmts.slice().sort(function (fmt1, fmt2) {
                       return -(
@@ -7380,14 +7413,14 @@ Send this to test?
             history.replaceState(
               null,
               'unused-string',
-              location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '') + '/' + slashSeparated.join('/'));
+              location.protocol + '//' + location.host + '/' + slashSeparated.join('/'));
             break;
 
           case 'search': // update search
             history.replaceState(
               null,
               'unused-string',
-              location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '') + '/' + location.pathname.replace(/^\/+/, '').replace(/\/+$/, '') + '?' + slashSeparated.join('/'));
+              location.protocol + '//' + location.host + '/' + location.pathname.replace(/^\/+/, '').replace(/\/+$/, '') + '?' + slashSeparated.join('/'));
             break;
 
           case 'hash':
