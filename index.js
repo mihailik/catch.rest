@@ -6028,12 +6028,12 @@ on(div, "touchstart", function () {
 
           completeAnimation = function () {
             fromTab.contentElem.style.transition = 'none';
-            fromTab.contentElem.style.display = 'none';
+            fromTab.contentElem.style.visibility = 'none';
             fromTab.contentElem.style.opacity = '0';
             fromTab.contentElem.style.zIndex = '1';
             fromTab.contentElem.style.pointerEvents = 'none';
 
-            toTab.contentElem.style.display = '';
+            toTab.contentElem.style.visibility = '';
             toTab.contentElem.style.opacity = '1';
             toTab.contentElem.style.zIndex = '10';
             toTab.contentElem.style.pointerEvents = 'all';
@@ -6050,8 +6050,8 @@ on(div, "touchstart", function () {
             fromTab.contentElem.style.pointerEvents = 'none';
             toTab.contentElem.style.pointerEvents = 'all';
 
-            fromTab.contentElem.style.display = '';
-            toTab.contentElem.style.display = '';
+            fromTab.contentElem.style.visibility = '';
+            toTab.contentElem.style.visibility = '';
 
             animateTimeout = setTimeout(function () {
               fromTab.contentElem.style.transition = 'opacity ' + animationMsec + 'ms, trasform ' + Math.floor(animationMsec/2) + 'ms';
@@ -6059,13 +6059,16 @@ on(div, "touchstart", function () {
 
               animateTimeout = setTimeout(function () {
                 toTab.contentElem.style.opacity = '1';
-
                 animateTimeout = setTimeout(function () {
-                  fromTab.contentElem.style.transition = 'none';
-                  toTab.contentElem.style.transition = 'none';
+                  fromTab.contentElem.style.opacity = '0';
 
-                  animateTimeout = setTimeout(/** @type {Function} */(completeAnimation), 1);
-                }, animationMsec + 10);
+                  animateTimeout = setTimeout(function () {
+                    fromTab.contentElem.style.transition = 'none';
+                    toTab.contentElem.style.transition = 'none';
+
+                    animateTimeout = setTimeout(/** @type {Function} */(completeAnimation), 1);
+                  }, animationMsec + 10);
+                }, animationMsec);
               }, 1);
             }, 1);
           }, 1);
@@ -7028,7 +7031,8 @@ on(div, "touchstart", function () {
                       fileExists
                     };
                     var ls = ts.createLanguageService(host);
-                    var replyFilename = 'reply.json';
+                    var replyFilename =
+                      /^\s*\{/.test(text) && /\}\s*$/.test(text) ?  'reply.json' : 'reply.js';
                     var fmts = ls.getFormattingEditsForDocument(replyFilename, {
                       ConvertTabsToSpaces: true,
                       convertTabsToSpaces: true,
