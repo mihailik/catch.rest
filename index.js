@@ -2163,6 +2163,21 @@ on(div, "touchstart", function () {
               return new Promise(function (resolve) { resolve(null);  }).then(function() {
                 process.stdout.write(ctx.req.method + ' ' + ctx.url.pathname);
 
+                ctx.res.setHeader('Access-Control-Allow-Credentials', 'true');
+                ctx.res.setHeader('Access-Control-Allow-Headers', ctx.req.headers['access-control-request-headers'] || '*');
+                ctx.res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+                ctx.res.setHeader('Access-Control-Allow-Origin', ctx.req.headers.origin || '*');
+                // ctx.res.setHeader('Access-Control-Max-Age', '3600');
+                ctx.res.setHeader('Allow', 'POST, OPTIONS');
+                ctx.res.setHeader('Server', 'catch-rest JSON');
+                ctx.res.setHeader('Content-Type', 'text/html; charset=utf-8');
+                // ctx.res.setHeader('Date', new Date().toISOString());
+
+                if (ctx.req.method === 'OPTIONS') {
+                  ctx.res.end();
+                  return;
+                } 
+
                 if (ctx.req.method === 'POST' && ctx.url.pathname === '/xhr') {
                   return handleXhrRequest(ctx);
                 }
@@ -7119,7 +7134,7 @@ on(div, "touchstart", function () {
               var replyTime = getTimeNow() - startTime;
               editor.setOption('readOnly', false);
 
-              var bt = getBottomDetailsWithRawReply(text);
+              var bt = getBottomDetailsWithRawReply(err.message || String(err));
               set(bt.withSplitter.splitterMainPanel, 'Failed: ' + (replyTime / 1000) + 's.');
               if (bt.structuredReply) {
                 bt.structuredReply.editor.setValue('');
