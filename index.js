@@ -7040,8 +7040,6 @@ on(div, "touchstart", function () {
                       trimTrailingWhitespace: true,
                       semicolons: ts.SemicolonPreference.Ignore
                     });
-                    if (typeof console !== 'undefined' && console && typeof console.log === 'function')
-                      console.log('getFormattingEditsForDocument ', fmts);
 
                     var fmtsFromEnd = fmts.slice().sort(function (fmt1, fmt2) {
                       return -(
@@ -7068,9 +7066,10 @@ on(div, "touchstart", function () {
                         formattedText.slice(fmt.span.start + fmt.span.length);
                     }
 
-                    console.log('appliedFmts ', appliedFmts);
-
                     bts.structuredReply.editor.setValue(formattedText);
+                    setTimeout(function () {
+                      bts.structuredReply.editor.refresh();
+                    }, 100);
 
                     function getCompilationSettings() {
                       return settings;
@@ -7118,6 +7117,12 @@ on(div, "touchstart", function () {
 
               var bt = getBottomDetailsWithRawReply(text);
               set(bt.withSplitter.splitterMainPanel, 'Failed: ' + (replyTime / 1000) + 's.');
+              if (bt.structuredReply) {
+                bt.structuredReply.editor.setValue('');
+                if (bt.structuredReply.editor.hasFocus()) {
+                  bt.rawReply.editor.focus();
+                }
+              }
             }
           );
 

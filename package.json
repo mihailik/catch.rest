@@ -22,7 +22,7 @@
   "devDependencies": {
     "@types/codemirror": "^5.60.5",
     "codemirror": "5",
-    "ts-jsonp": "^5.0.0-dev.20221215",
+    "ts-jsonp": "^4.9.4",
     "typescript": "^4.9.3",
     "xlsx": "*"
   }
