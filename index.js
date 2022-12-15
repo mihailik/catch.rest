@@ -46,7 +46,7 @@ function catchREST() {
   }
 
   if (typeof Object.keys !== 'function') {
-    Object.keys = function (obj) {
+    Object.keys = function (/** @type {any} */ obj) {
       var keys = [];
       for (var k in obj) {
         keys.push(k);
@@ -67,7 +67,7 @@ function catchREST() {
   }
   if (typeof [].map !== 'function') {
     (function () {
-      Array.prototype.map = function map(callback) {
+      Array.prototype.map = function map(/** @type {(arg0: any, arg1: number, arg2: any[]) => any} */ callback) {
         var arr = this;
         var res = [];
         for (var i = 0; i < this.length; i++) {
@@ -82,7 +82,7 @@ function catchREST() {
   }
 
   if (typeof [].filter !== 'function') {
-    Array.prototype.filter = function (filt) {
+    /** @type {*} */(Array.prototype).filter = function (/** @type {(arg0: any) => any} */ filt) {
       var arr = this;
       var res = [];
       for (var i = 0; i < this.length; i++) {
@@ -102,6 +102,10 @@ function catchREST() {
 
     return Promise;
 
+    /**
+     * @param {{ (value: any): void; (error: any): void; }} callback
+     * @param {any} arg
+     */
     function queueNext(callback, arg) {
       var set = queueCb.length;
       queueCb.push(callback);
@@ -122,6 +126,9 @@ function catchREST() {
       }
     }
 
+    /**
+     * @param {{ (resolve: any, reject: any): void; (resolve: any, reject: any): void; (resolve: any, reject: any): any; (_resolve: any, reject: any): void; (resolve: any, _reject: any): void; (arg0: (value: any) => void, arg1: (error: any) => void): void; }} resolver
+     */
     function Promise(resolver) {
       if (typeof resolver !== 'function') throw new Error('Expected function resolver: ' + typeof resolver);
 
@@ -134,18 +141,21 @@ function catchREST() {
       var outcome;
       var cbOK, cbFail;
 
+      /**
+       * @param {globalThis.Promise<any>} value
+       */
       function resolve(value) {
         if (state !== 'pending') return;
 
         if (value && typeof value.then === 'function') {
           self['[[PromiseState]]'] = state = 'resolving';
           value.then(
-            function (value) {
+            function (/** @type {any} */ value) {
               self['[[PromiseState]]'] = state = 'fulfilled';
               outcome = value;
               complete();
             },
-            function (error) {
+            function (/** @type {any} */ error) {
               self['[[PromiseState]]'] = state = 'failed';
               outcome = error;
               complete();
@@ -157,6 +167,9 @@ function catchREST() {
         }
       }
 
+      /**
+       * @param {any} error
+       */
       function reject(error) {
         if (state !== 'pending') return;
         self['[[PromiseState]]'] = state = 'failed';
@@ -175,11 +188,15 @@ function catchREST() {
         }
       }
 
+      /**
+       * @param {(value: any) => any} callback
+       * @param {Function} callbackFail
+       */
       function Then(callback, callbackFail) {
         if (typeof callback !== 'function') throw new Error('Expected function callback: ' + typeof callback);
         if (callbackFail != null && typeof callbackFail !== 'function') throw new Error('Expected omitted or function callbackFail: ' + typeof callbackFail);
 
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (/** @type {(arg0: any) => void} */ resolve, /** @type {(arg0: any) => void} */ reject) {
           if (state === 'fulfilled') queueNext(withOK, outcome);
           if (state === 'failed') queueNext(withFail, outcome);
 
@@ -188,14 +205,24 @@ function catchREST() {
           if (typeof callbackFail !== 'function')
             (cbFail || (cbFail = [])).push(withFail);
 
+          /**
+           * @param {any} value
+           */
           function withOK(value) {
             handleSettled(value, callback);
           }
 
+          /**
+           * @param {any} error
+           */
           function withFail(error) {
-            handleSettled(error, callbackFail)
+            handleSettled(error, /** @type {*} */(callbackFail))
           }
 
+          /**
+           * @param {globalThis.Promise<any>} outcome
+           * @param {(arg0: any) => any} callback
+           */
           function handleSettled(outcome, callback) {
             try {
               outcome = callback(outcome);
@@ -212,8 +239,11 @@ function catchREST() {
         });
       }
 
+      /**
+       * @param {any} callback
+       */
       function Catch(callback) {
-        return Then(function (value) { return value; }, callback);
+        return Then(function (/** @type {any} */ value) { return value; }, callback);
       }
 
       this.then = Then;
@@ -231,26 +261,43 @@ function catchREST() {
     Promise.reject = reject;
     Promise.resolve = resolve;
 
+    /**
+     * @param {string | any[]} arr
+     */
     function all(arr) {
-      return new Promise(function (resolve, reject) {
+      return new Promise(function (/** @type {(arg0: any[]) => void} */ resolve, /** @type {(arg0: any) => void} */ reject) {
         if (!arr.length) { resolve([]); }
         var results = [];
         var toComplete = arr.length;
         for (var i = 0; i < arr.length; i++) {
-          arr[i].then(
-            callbackFor(i),
-            fail
-          );
+          var pr = arr[i];
+          if (pr && typeof pr.then === 'function') {
+            pr.then(callbackFor(i), fail);
+          } else {
+            // element of input array is not promise, transfer it directly to results,
+            // and decrement await counter
+            results[i] = pr;
+            toComplete--;
+          }
         }
 
+        // if no promises in input array, already resolve
+        if (!toComplete) resolve(results);
+
+        /**
+         * @param {any} error
+         */
         function fail(error) {
           toComplete = 0;
           results = /** @type {*} */(void 0);
           reject(error);
         }
 
+        /**
+         * @param {number} i
+         */
         function callbackFor(i) {
-          return function (value) {
+          return function (/** @type {any} */ value) {
             if (!toComplete) return;
 
             results[i] = value;
@@ -261,23 +308,35 @@ function catchREST() {
       });
     }
 
+    /**
+     * @param {string | any[]} arr
+     */
     function race(arr) {
-      return new Promise(function (resolve, reject) {
-        if (!arr) return resolve();
+      return new Promise(function (/** @type {(arg0: undefined) => void} */ resolve, /** @type {any} */ reject) {
+        if (!arr) return /** @type {*} */(resolve)();
         for (var i = 0; i < arr.length; i++) {
-          arr[i].then(resolve, reject);
+          var pr = arr[i];
+          if (pr && typeof pr.then === 'function') pr.then(resolve, reject);
+            // if element of input array is not promise, already resolve
+          else resolve(pr);
         }
       });
     }
 
+    /**
+     * @param {any} reason
+     */
     function reject(reason) {
-      return new Promise(function (resolve, reject) {
+      return new Promise(function (/** @type {any} */ _resolve, /** @type {(arg0: any) => void} */ reject) {
         reject(reason);
       });
     }
 
+    /**
+     * @param {any} value
+     */
     function resolve(value) {
-      return new Promise(function (resolve, reject) {
+      return new Promise(function (/** @type {(arg0: any) => void} */ resolve, /** @type {any} */ _reject) {
         resolve(value);
       });
     }
@@ -323,14 +382,17 @@ function catchREST() {
     );
   }
   getFunctionCommentContent.regex_functionShape = /^([\s\S\n\r]*\/\*\s*)([\s\S\n\r]*)(\s*\*\/[\s\r\n]*}[\s\r\n]*)$/;
-  getFunctionCommentContent.takeContent = function (_whole, _lead, content, _tail) { return trimEnd(content); };
+  getFunctionCommentContent.takeContent = function (/** @type {any} */ _whole, /** @type {any} */ _lead, /** @type {string | null | undefined} */ content, /** @type {any} */ _tail) { return trimEnd(content); };
   getFunctionCommentContent.regex_starSpaceSlash = /\* \//g;
   getFunctionCommentContent.regex_slashSpaceStar = /\/ \*/g;
 
+  /**
+   * @param {() => void} fn
+   */
   function getFunctionBody(fn) {
     return (fn + '').replace(getFunctionBody.regex_functionShape, getFunctionBody.takeContent);
   }
-  getFunctionBody.takeContent = function (_whole, _lead, content, _tail) { return trimEnd(content); };
+  getFunctionBody.takeContent = function (/** @type {any} */ _whole, /** @type {any} */ _lead, /** @type {string | null | undefined} */ content, /** @type {any} */ _tail) { return trimEnd(content); };
   getFunctionBody.regex_functionShape = /^([^{]*{\s*)([\s\S\n\r]*)(\s*}[\s\r\n]*)$/;
 
   /** @param {string | null | undefined} str */
@@ -568,6 +630,10 @@ function catchREST() {
     return verbMatch ? { leadingSlash: verbMatch[1], verb: verbMatch[2], trailingSlash: verbMatch[3], index: verbMatch.index + (verbMatch[1] ? 1 : 0) } : void 0;
   }
 
+  /**
+   * @param {string} str
+   * @param {number | undefined} [seed]
+   */
   function calcHash(str, seed) {
     if (!seed) seed = 0;
     var h1 = 0xdeadbeef ^ seed,
@@ -585,6 +651,10 @@ function catchREST() {
   }
 
   if (typeof Math.imul !== 'function') (function () {
+    /**
+     * @param {number} x
+     * @param {number} y
+     */
     function imul(x, y) {
       return (x * y) | 0;
     }
@@ -614,13 +684,13 @@ function catchREST() {
     }
   };
 
-  /** @type {ReturnType<typeof createParser>} */
+  /** @type {ReturnType<typeof createUnicodeFormattedParser>} */
   var _parseRanges;
 
-  /** @type {ReturnType<typeof createParser>} */
+  /** @type {ReturnType<typeof createUnicodeFormattedParser>} */
   function runParseRanges(text, options) {
     if (!_parseRanges)
-      if (!_parseRanges) _parseRanges = createParser();
+      if (!_parseRanges) _parseRanges = createUnicodeFormattedParser();
     var parsed = _parseRanges(text, options);
     return parsed;
   }
@@ -804,7 +874,7 @@ function catchREST() {
   }
 
 
-  function createParser() {
+  function createUnicodeFormattedParser() {
 
     /** @typedef {{ formatted: string, plain: string, modifiers: string[], fullModifiers: string }} LookupEntry */
 
@@ -1466,6 +1536,7 @@ Oh yes, wicked Unicode magic.
       'catchREST("page");\n' +
       '</' + 'script' + '>\n' +
 
+      '<' + 'script' + ' src="ts.js"></' + 'script' + '>\n' +
       '</' + 'body' + '></' + 'html' + '>';
 
     return html;
@@ -1524,6 +1595,9 @@ Oh yes, wicked Unicode magic.
       });
     }
 
+    /**
+     * @param {string} str
+     */
     function derivePort(str) {
       str = String(str).toLowerCase();
       var hash = calcHash(str);
@@ -1583,13 +1657,15 @@ Oh yes, wicked Unicode magic.
         //'xlsx/jszip.js'
 
         // DISABLE for now
-        // 'typescript/lib/typescript.js'
+        'typescript/lib/typescript.js'
         // include lib.d.ts here? probably no
       ];
 
       var indexHTML_path = path.resolve(__dirname, 'index.html');
       var index404HTML_path = path.resolve(__dirname, '404.html');
       var libJS_path = path.resolve(__dirname, 'lib.js');
+      var libTS_path = path.resolve(__dirname, 'ts.js');
+      var libDTS_path = path.resolve(__dirname, 'ts-libdts.js');
       var readme_path = path.resolve(__dirname, 'README.md');
 
       function detectLocalBuildValid() {
@@ -1637,8 +1713,11 @@ Oh yes, wicked Unicode magic.
         var importDownloads = imports.map(function (importLocalPath) {
           return new Promise(function (resolve, reject) {
             var maxRemainingRedirects = 10;
-            getFromUrl(http.get('http://unpkg.com/' + importLocalPath));
+            getFromUrl('http://unpkg.com/' + importLocalPath);
 
+            /**
+             * @param {string} url
+             */
             function getFromUrl(url) {
               var req = /^https/i.test(url) ? https.get(url) : http.get(url);
               var buffers = [];
@@ -1655,6 +1734,7 @@ Oh yes, wicked Unicode magic.
                     && maxRemainingRedirects) {
                     maxRemainingRedirects++;
                     process.stdout.write(url + ' --> ' + res.headers.location + '...');
+                    if (!res.headers.location) return reject(new Error('HTTP/' + res.statusCode + ' without Location header.'));
                     getFromUrl(res.headers.location);
                     return;
                   }
@@ -1679,20 +1759,30 @@ Oh yes, wicked Unicode magic.
        * @param {{ importLocalPath: string; fullPath?: string | undefined; content: string; }[]} imports
        */
       function combineLib(imports) {
-        var combined = imports.map(function (importEntry) {
+        var tsCombined;
+        var libCombined = [];
+
+        for (var i = 0; i < imports.length; i++) {
+          var importEntry = imports[i];
+
+          var processedContent = undefined;
           switch (path.extname(importEntry.importLocalPath).toLowerCase()) {
             case '.js':
-              var processedContent = importEntry.content;
               if (/typescript/i.test(importEntry.importLocalPath)) {
-                processedContent = strictES3(importEntry.importLocalPath, importEntry.content);
-
+                var tsProcessedContent = strictES3(importEntry.importLocalPath, importEntry.content);
                 // Disabling as it may destabilise TS: concatenate most TypeScript namespaces
-                // processedContent = processedContent.replace(/\}\)\(ts\s*\|\|\s*\(ts\s*=\s*\{\}\)\);\s*(((\s*\/\/[^\n]*\n)|(\s*\/\*+[^\*]*\*\/))*)\s*var\s*ts;\s*\(function\s*\(ts\)\s*\{/g, '\n\n$1\n');
+                // tsProcessedContent = processedContent.replace(/\}\)\(ts\s*\|\|\s*\(ts\s*=\s*\{\}\)\);\s*(((\s*\/\/[^\n]*\n)|(\s*\/\*+[^\*]*\*\/))*)\s*var\s*ts;\s*\(function\s*\(ts\)\s*\{/g, '\n\n$1\n');
 
                 // This causes errors:  exclude 'ts.' prefix to refer to values within ts namespace directly
-                // processedContent = processedContent.replace(/([^.])\bts\./g, '$1');
+                // tsProcessedContent = processedContent.replace(/([^.])\bts\./g, '$1');
+
+                if (tsCombined) tsCombined.push(tsProcessedContent);
+                else tsCombined = [tsProcessedContent];
+                continue;
               }
-              else if (/codemirror\.js/i.test(importEntry.importLocalPath)) {
+
+              processedContent = importEntry.content;
+              if (/codemirror\.js/i.test(importEntry.importLocalPath)) {
                 processedContent = patchCodeMirror(processedContent);
               }
               else if (/\bcodemirror\b/i.test(importEntry.importLocalPath)
@@ -1704,8 +1794,12 @@ Oh yes, wicked Unicode magic.
                 processedContent = patchCodeMirrorHtmlMixed(processedContent);
               }
 
-              return '// #region ' + path.basename(importEntry.importLocalPath).replace(/\.js$/, '') + '\n' + processedContent + '\n' + '// #endregion';
-            case '.css': return (
+              if (processedContent) processedContent +=
+                '// #region ' + path.basename(importEntry.importLocalPath).replace(/\.js$/, '') + '\n' + processedContent + '\n' + '// #endregion';
+              break;
+
+            case '.css':
+              processedContent = (
               '///// ' + path.basename(importEntry.importLocalPath) + ' /////\n' +
               '(function(value) { var style = document.createElement("style");\n' +
               'if ("styleSheet" in style && "type" in style) {\n' +
@@ -1717,14 +1811,24 @@ Oh yes, wicked Unicode magic.
               '(document.body || document.getElementsByTagName("head")[0]).appendChild(style); })(' + JSON.stringify(importEntry.content) + ');\n'
             );
           }
-        });
 
-        return (
-          '// {build-by-hash:' + catchREST_hash + ' ' + new Date() + ' with  ' + process.platform + '/' + process.arch + '}\n' +
-          combined.join('\n\n')
-        );
+          if (processedContent) libCombined.push(processedContent);
+        }
+
+        return {
+          lib:
+            '// {build-by-hash:' + catchREST_hash + ' ' + new Date() + ' with  ' + process.platform + '/' + process.arch + '}\n' +
+            libCombined.join('\n\n'),
+          ts:
+            tsCombined &&
+            tsCombined.join('\n\n') + '\n\n\n' +
+            '// {build-by-hash:' + catchREST_hash + ' ' + new Date() + ' with  ' + process.platform + '/' + process.arch + '}\n'
+        };
       }
 
+      /**
+       * @param {string} libText
+       */
       function patchCodeMirror(libText) {
         var replacedText = (libText
           .replace(
@@ -1787,6 +1891,9 @@ on(div, "touchstart", function () {
         return replacedText;
       }
 
+      /**
+       * @param {string} libText
+       */
       function patchCodeMirrorCSS(libText) {
         return (libText
           .replace(
@@ -1796,6 +1903,9 @@ on(div, "touchstart", function () {
         );
       }
 
+      /**
+       * @param {string} libText
+       */
       function patchCodeMirrorHtmlMixed(libText) {
         return (libText
           .replace(
@@ -1942,7 +2052,9 @@ on(div, "touchstart", function () {
          * @returns {Promise<string>}
          */
         function withImports(imports) {
-          var combinedLib = combineLib(imports);
+          var comb = combineLib(imports);
+          var combinedLib = comb.lib;
+          var combinedTS = comb.ts;
 
           var builtHTML = getEmbeddedWholeHTML(true /* urlencoded */);
 
@@ -1961,34 +2073,47 @@ on(div, "touchstart", function () {
             libJS_path,
             combinedLib
           );
+          var skipTS = combinedTS && skipUnlessUpdated(
+            libTS_path,
+            combinedTS
+          );
           var skipReadme = skipUnlessUpdated(
             readme_path,
             builtReadme
           );
 
-          return Promise.all([skipIndexHTML, skipIndex404HTML, skipLib, skipReadme]).then(
+          return Promise.all([skipIndexHTML, skipIndex404HTML, skipLib, skipTS, skipReadme]).then(
             function (skipped) {
-              var skippedIndexHTML = skipped[0], skippedIndex404HTML = skipped[1], skippedLib = skipped[2], skippedReadme = skipped[3];
+              var skippedIndexHTML = skipped[0],
+                skippedIndex404HTML = skipped[1],
+                skippedLib = skipped[2],
+                skippedTS = skipped[3] || skipped[3] === void 0,
+                skippedReadme = skipped[4];
 
-              if (skippedIndexHTML && skippedIndex404HTML && skippedLib && skippedReadme)
+              if (skippedIndexHTML && skippedIndex404HTML && skippedLib && skippedTS && skippedReadme)
                 return 'Build already matches files.';
 
-              if (!skippedIndexHTML && !skippedIndex404HTML && !skippedLib && !skippedReadme)
-                return 'Build updated index.html, 404.html, lib.js and README.md with hash ' + catchREST_hash;
+              if (!skippedIndexHTML && !skippedIndex404HTML && !skippedLib && !skippedTS && !skippedReadme)
+                return 'Build updated index.html, 404.html, lib.js, ts.js and README.md with hash ' + catchREST_hash;
 
               return 'Build only updated ' +
                 (skippedIndexHTML ? '' : 'index.html ') +
                 (skippedIndex404HTML ? '' : '404.html ') +
                 (skippedLib ? '' : 'lib.js ') +
+                (skippedTS ? '' : 'ts.js ' ) +
                 (skippedReadme ? '' : 'README.md ') +
                 'with hash ' + catchREST_hash;
             });
 
+          /**
+           * @param {string} filePath
+           * @param {string | Buffer} content
+           */
           function skipUnlessUpdated(filePath, content) {
             var alreadyMatchesPromise = readFileAsync(filePath).then(
               function (oldContent) {
                 var markerRegexp = /\{build-by-hash:([^}]+)\}/g;
-                if (oldContent.replace(markerRegexp, '') === content.replace(markerRegexp, '')) return true;
+                if (oldContent.replace(markerRegexp, '') === String(content).replace(markerRegexp, '')) return true;
               },
               function () {// failed to read old file -- fine, just write then
               }
@@ -2004,7 +2129,10 @@ on(div, "touchstart", function () {
       });
     }
 
-    /** @param {Promise<string>} buildPromise */
+    /**
+     * @param {Promise<string>} buildPromise
+     * @param {number} port
+     */
     function startServer(port, buildPromise) {
       var mimeByExt = {
         html: 'text/html',
@@ -2103,6 +2231,9 @@ on(div, "touchstart", function () {
                 return responseText;
               }
 
+              /**
+               * @param {{ [x: string]: any; url: string; method: string; headers?: Record<string, string> | undefined; body?: string | undefined; }} options
+               */
               function makeHttpRequestWithRedirects(options) {
                 return makeHttpRequest(options).then(withResponse);
                 /** @param {{statusCode: number, statusMessage: string | undefined, headers: Record<string,string|string[]>, body: Buffer}} response */
@@ -2195,6 +2326,9 @@ on(div, "touchstart", function () {
                     resolve(combinedBufs);
                   }
 
+                  /**
+                   * @param {any} error
+                   */
                   function onRequestError(error) {
                     reject(error);
                   }
@@ -2459,6 +2593,9 @@ on(div, "touchstart", function () {
         proc.on('exit', handleExit);
         var counted = false;
 
+        /**
+         * @param {string | Uint8Array} data
+         */
         function handleChildStdout(data) {
           resolve();
           if (!counted) {
@@ -2470,6 +2607,9 @@ on(div, "touchstart", function () {
           process.stdout.write(data);
         }
 
+        /**
+         * @param {string | Uint8Array} data
+         */
         function handleChildStderr(data) {
           resolve();
           if (!counted) {
@@ -2481,17 +2621,26 @@ on(div, "touchstart", function () {
           process.stderr.write(data);
         }
 
+        /**
+         * @param {void | PromiseLike<void>} error
+         */
         function handleError(error) {
           resolve(error);
           var procId = proc.pid;
         }
 
+        /**
+         * @param {{ command: string; }} msg
+         */
         function handleChildMessage(msg) {
           if (msg && msg.command === 'start') {
             startNewInstance();
           }
         }
 
+        /**
+         * @param {void | PromiseLike<void>} exitCode
+         */
         function handleExit(exitCode) {
           resolve(exitCode);
 
@@ -2515,9 +2664,12 @@ on(div, "touchstart", function () {
       });
     }
 
+    /**
+     * @param {number} port
+     */
     function shutdownPredecessorIfNeeded(port) {
       if (process.env[catchREST_secret_variable_name]) {
-        return requestShutdown(port).then(function () {
+        return requestShutdown(String(port)).then(function () {
           // response may come before server is down and HTTP port fully released
           return new Promise(function (resolve) { setTimeout(resolve, 100); }).then(function () {
             return drinkChar + '~' + process.pid;
@@ -2528,6 +2680,9 @@ on(div, "touchstart", function () {
       }
     }
 
+    /**
+     * @param {string} port
+     */
     function requestShutdown(port) {
       return new Promise(function (resolve, reject) {
         var http = require('http');
@@ -2587,31 +2742,51 @@ on(div, "touchstart", function () {
 
     // #region COMMON BROWSER UTILS
 
+    /**
+     * @param {(Window & typeof globalThis) | HTMLElement} elem
+     * @param {string} eventName
+     * @param {(e: any) => void} callback
+     */
     function on(elem, eventName, callback) {
       if (elem.addEventListener) return elem.addEventListener(eventName, callback);
+      // @ts-ignore
       else if (elem.attachEvent) return elem.attachEvent('on' + eventName, callback);
-      else elem['on' + eventName] = function (evt) {
+      else elem['on' + eventName] = function (/** @type {Event | undefined} */ evt) {
         if (!evt) evt = typeof event === 'undefined' ? void 0 : event;
-        return callback(evt);
+        return callback(/** @type {Event} */(evt));
       };
     }
 
+    /**
+     * @param {Window & typeof globalThis} elem
+     * @param {string} eventName
+     * @param {() => void} callback
+     */
     function off(elem, eventName, callback) {
       if (elem.removeEventListener) return elem.removeEventListener(eventName, callback);
+      // @ts-ignore
       else if (elem.detachEvent) return elem.detachEvent('on' + eventName, callback);
       else elem['on' + eventName] = null;
     }
 
+    /**
+     * @param {HTMLElement} elem
+     * @param {string} value
+     */
     function set(elem, value) {
       if (typeof value === 'string') {
         if (elem && 'textContent' in elem) {
           elem.textContent = value;
         } else if (elem && 'styleSheet' in elem && 'type' in elem) {
+          // @ts-ignore
           if ('type' in elem && !elem.type) elem.type = 'text/css';
+          // @ts-ignore
           elem.styleSheet.cssText = value;
         } else if (elem && 'innerText' in elem) {
+          // @ts-ignore
           elem.innerText = value;
         } else {
+          // @ts-ignore
           elem.text = value;
         }
       }
@@ -2675,6 +2850,9 @@ on(div, "touchstart", function () {
           xhr.send();
         }
 
+        /**
+         * @param {any} err
+         */
         function handleOnerror(err) {
           capturedError = err;
           clearTimeout(handleResultDebounceTimeout);
@@ -3099,7 +3277,7 @@ on(div, "touchstart", function () {
             // (because files with corresponding paths don't exist in DOM)
 
             for (var path in toUpdateDOM) {
-              /** @type {{ content, encoding } | undefined} */
+              /** @type {{ content: any, encoding: any } | undefined} */
               var entry = void 0;
               if (!path || path.charCodeAt(0) !== 47) continue; // expect leading slash
               var content = toUpdateDOM[path];
@@ -3189,6 +3367,9 @@ on(div, "touchstart", function () {
           return nextNode;
         }
 
+        /**
+         * @param {boolean | undefined} [skipPreHTML]
+         */
         function getFirstElement(skipPreHTML) {
           if (!skipPreHTML) {
             var doc = document.documentElement || document.getElementsByTagName('html')[0];
@@ -3474,11 +3655,13 @@ on(div, "touchstart", function () {
           return decodedText;
         };
 
+        /**
+         * @param {string | any[] | null} content
+         * @param {any} encoding
+         */
         function write(content, encoding) {
 
-          content =
-            content === null || typeof content === 'undefined' ? content :
-              String(content);
+          content = !content ? '' : String(content);
 
           var encoded = encoding ? { content: content, encoding: encoding } : bestEncode(content);
           var protectedText = encoded.content.
@@ -4187,8 +4370,11 @@ on(div, "touchstart", function () {
         return b64;
       }
 
+      /**
+       * @param {any[]} content
+       */
       function _encodeArrayOrSimilarAsJSON(content) {
-        var type = content instanceof Array ? null : content.constructor.name || content.type;
+        var type = content instanceof Array ? null : /** @type {*} */(content).constructor && /** @type {*} */(content).constructor.name || /** @type {*} */(content).type;
         if (typeof JSON !== 'undefined' && typeof JSON.stringify === 'function') {
           if (type) {
             var wrapped = { type: type, content: content };
@@ -4204,7 +4390,7 @@ on(div, "touchstart", function () {
           var jsonArr = [];
           if (type) {
             jsonArr.push('{"type": "');
-            jsonArr.push(content.type || content.prototype.constructor.name);
+            jsonArr.push(type);
             jsonArr.push('", "content": [');
           }
           else {
@@ -4972,6 +5158,10 @@ on(div, "touchstart", function () {
               return sqlText.replace(/\u00FFf/g, '\u00FF').replace(/\u00FF0/g, '\u0000');
             }
 
+            /**
+             * @param {string} message
+             * @param {SQLError} sqlError
+             */
             function reportSQLError(message, sqlError) {
               if (typeof console !== 'undefined' && typeof console.error === 'function') {
                 if (sqlError)
@@ -5103,9 +5293,12 @@ on(div, "touchstart", function () {
               }
             }
 
+            /**
+             * @param {string | Event} event
+             */
             function getErrorMessage(event) {
-              if (event.message) return event.message;
-              else if (event.target) return event.target.errorCode;
+              if (/** @type {*} */(event).message) return /** @type {*} */(event).message;
+              else if (/** @type {*} */(event).target) return /** @type {*} */(event).target.errorCode;
               return event + '';
             }
 
@@ -5154,7 +5347,7 @@ on(div, "touchstart", function () {
                 var metadataStore = applyTransaction.objectStore('metadata');
                 var filesStore = applyTransaction.objectStore('files');
 
-                var onerror = function (errorEvent) {
+                var onerror = function (/** @type {any} */ errorEvent) {
                   if (typeof console !== 'undefined' && console && typeof console.error === 'function')
                     console.error('Could not count files store: ', errorEvent);
                   callback(createIndexedDBShadow(db, detached.timestamp));
@@ -5320,6 +5513,9 @@ on(div, "touchstart", function () {
                 }
               }
 
+              /**
+               * @param {{ [x: string]: any; hasOwnProperty?: any; }} writes
+               */
               function writeCore(writes) {
                 lastWrite = getTimeNow();
                 var writeTransaction = db.transaction(['files', 'metadata'], 'readwrite');
@@ -5482,6 +5678,31 @@ on(div, "touchstart", function () {
       }
     }
     // #endregion
+
+    /**
+     * @returns {Promise<import('typescript')>}
+     */
+    function waitForTypeScriptLoad() {
+      return new Promise(function (resolve, reject) {
+        var waitUntil = getTimeNow() + 60 * 1000 * 1.5; // 1.5 minutes and timeout
+        checkAndWait();
+
+        function checkAndWait() {
+          var ts = getGlobalTS();
+          if (ts) resolve(ts);
+          if (getTimeNow() > waitUntil) reject(new Error('TypeScript engine did not load in ample time.'));
+          else setTimeout(checkAndWait, 300);
+        }
+
+        function getGlobalTS() {
+          var _ts =
+            // @ts-ignore
+            typeof ts === 'undefined' ? void 0 : /** @type {import('typescript')} */(ts);
+
+          if (_ts && typeof _ts.createLanguageService === 'function') return _ts;
+        }
+      });
+    }
 
     /**
      * @param {{
@@ -6046,8 +6267,8 @@ on(div, "touchstart", function () {
          *    tab: TabController;
          *  };
          *  structuredReply?: {
+         *    editor: import('codemirror').Editor;
          *    tab: TabController;
-         *    div: HTMLElement; 
          *  }
          * } | undefined} */
         var _bottomDetailsInstance;
@@ -6137,14 +6358,45 @@ on(div, "touchstart", function () {
             return bt;
           }
 
-          var div = document.createElement('div');
-          div.style.cssText = 'position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; color: tomato; margin-left: 6.1em';
+          var tab = bt.tabs.addTab({ accent: '#02cccc', label: 'Data' });
+
+          var cm =
+            //@ts-ignore
+            CodeMirror(
+              tab.content,
+              {
+                value: '',
+
+                mode: 'javascript',
+
+                // @ts-ignore
+                foldGutter: true,
+                gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+                extraKeys: {
+                  Tab: executeTabKeyCommand
+                },
+
+                lineNumbers: true,
+                readOnly: true,
+                lineWrapping: true
+              });
+          var copyFocus = cm.focus.bind(cm);
+          cm.focus = function () {
+            copyFocus();
+            bt.tabs.switchToTab(tab);
+            setTimeout(function () {
+              copyFocus();
+            }, 10);
+          };
+
+          tabBetweenEditors.push(cm);
+
+          addLinedPaperHandling(cm);
 
           var structuredReply = {
-            tab: bt.tabs.addTab({ accent: '#02cccc', label: 'Data' }),
-            div: div
+            tab: tab,
+            editor: cm
           };
-          structuredReply.tab.content.appendChild(div);
           bt.structuredReply = structuredReply;
 
           return bt;
@@ -6675,7 +6927,10 @@ on(div, "touchstart", function () {
           nextCm.focus();
         }
 
+        var lastSendRequestInstance;
         function executeSendRequestCommand() {
+          var sendRequestInstance = lastSendRequestInstance = {};
+
           var pars = parseTextRequest(editor.getValue());
 
           if (!pars || !pars.firstLine) return;
@@ -6736,22 +6991,132 @@ on(div, "touchstart", function () {
           });
           ftc.then(
             function (response) {
+              if (lastSendRequestInstance !== sendRequestInstance) return;
+
               var replyTime = getTimeNow() - startTime;
               var headers = response.headers;
               var text = response.body;
               editor.setOption('readOnly', false);
-              set(getBottomDetails().withSplitter.splitterMainPanel, 'Done: ' + (replyTime / 1000) + 's.');
 
               var bt = getBottomDetailsWithRawReply(text);
+              set(bt.withSplitter.splitterMainPanel, 'Done: ' + (replyTime / 1000) + 's.');
 
+              if (!text) {
+                if (bt.structuredReply) {
+                  bt.structuredReply.editor.setValue('');
+                  if (bt.structuredReply.editor.hasFocus())
+                    bt.rawReply.editor.focus();
+                }
+              } else {
+                var bts = getBottomDetailsWithStructuredReply();
+                bts.structuredReply.editor.setValue('PROCESSING  ' + text);
+
+                waitForTypeScriptLoad().then(
+                  function (ts) {
+                    if (lastSendRequestInstance !== sendRequestInstance) return;
+
+                    var replyScriptSnapshot = ts.ScriptSnapshot.fromString(text);
+                    var settings = ts.getDefaultCompilerOptions();
+                    var host = {
+                      getCompilationSettings,
+                      getScriptFileNames,
+                      getScriptVersion,
+                      getScriptSnapshot,
+                      getCurrentDirectory,
+                      getDefaultLibFileName,
+                      readFile,
+                      fileExists
+                    };
+                    var ls = ts.createLanguageService(host);
+                    var replyFilename = 'reply.json';
+                    var fmts = ls.getFormattingEditsForDocument(replyFilename, {
+                      ConvertTabsToSpaces: true,
+                      convertTabsToSpaces: true,
+                      IndentSize: 2,
+                      indentSize: 2,
+                      IndentStyle: ts.IndentStyle.Smart,
+                      TabSize: 2,
+                      tabSize: 2,
+                      trimTrailingWhitespace: true,
+                      semicolons: ts.SemicolonPreference.Ignore
+                    });
+                    if (typeof console !== 'undefined' && console && typeof console.log === 'function')
+                      console.log('getFormattingEditsForDocument ', fmts);
+
+                    var fmtsFromEnd = fmts.slice().sort(function (fmt1, fmt2) {
+                      return -(
+                        (fmt1.span.start + fmt1.span.length) - (fmt2.span.start + fmt2.span.length) ||
+                        fmt1.span.start - fmt2.span.start
+                      );
+                    });
+
+                    var formattedText = text;
+                    var appliedFmts = [];
+                    for (var i = 0; i < fmtsFromEnd.length; i++) {
+                      var fmt = fmtsFromEnd[i];
+                      if (text.slice(fmt.span.start, fmt.span.start + fmt.span.length) === fmt.newText) continue;
+                      appliedFmts.push({
+                        oldText:
+                          text.slice(Math.max(fmt.span.start - 3, 0), fmt.span.start) + ']' +
+                          text.slice(fmt.span.start, fmt.span.start + fmt.span.length) +
+                          '[' + text.slice(fmt.span.start + fmt.span.length, fmt.span.start + fmt.span.length + 3),
+                        ...fmt
+                      });
+                      formattedText =
+                        text.slice(0, fmt.span.start) +
+                        fmt.newText +
+                        formattedText.slice(fmt.span.start + fmt.span.length);
+                    }
+
+                    console.log('appliedFmts ', appliedFmts);
+
+                    bts.structuredReply.editor.setValue(formattedText);
+
+                    function getCompilationSettings() {
+                      return settings;
+                    }
+
+                    function getScriptFileNames() {
+                      return ['/' + replyFilename];
+                    }
+
+                    /** @param {string} file */
+                    function getScriptVersion(file) {
+                      return '1';
+                    }
+
+                    /** @param {string} file */
+                    function getScriptSnapshot(file) {
+                      if (file.indexOf(replyFilename) >=0) return replyScriptSnapshot;
+                    }
+
+                    function getCurrentDirectory() {
+                      return '/';
+                    }
+
+                    function getDefaultLibFileName() {
+                      return '/lib.d.ts';
+                    }
+
+                    function readFile(file) {
+                      if (file.indexOf(replyFilename) >= 0) return text;
+                      else return void 0;
+                    }
+
+                    function fileExists(file) {
+                      return file.indexOf(replyFilename) >= 0;
+                    }
+                  }
+                );
+              }
             },
             function (err) {
-              var replyTime = getTimeNow() - startTime;
+              if (lastSendRequestInstance !== sendRequestInstance) return;
 
+              var replyTime = getTimeNow() - startTime;
               editor.setOption('readOnly', false);
-              var bt = getBottomDetailsWithStructuredReply();
-              bt.rawReply.editor.setValue('');
-              set(bt.structuredReply.div, err.message || String(err));
+
+              var bt = getBottomDetailsWithRawReply(text);
               set(bt.withSplitter.splitterMainPanel, 'Failed: ' + (replyTime / 1000) + 's.');
             }
           );
@@ -6930,6 +7295,9 @@ Send this to test?
         shellLoader.loadingComplete(persistChange);
       }
 
+      /**
+       * @param {string | null | undefined} text
+       */
       function persistChange(text) {
         var parsed = parseTextRequest(text);
 
@@ -6975,7 +7343,7 @@ Send this to test?
         var firstLine = parsed && parseFirstLine(parsed.firstLine);
         if (!parsed || !firstLine) {
           slashSeparated.push(
-            makeEncodedURL('', '', text)
+            makeEncodedURL('', '', text ||'')
           );
         } else {
           if (firstLine.verbPos >= 0) slashSeparated.push(makeEncodedURL(firstLine.verb, firstLine.url, parsed.body));
