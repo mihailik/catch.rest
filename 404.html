@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<!-- {build-by-hash:mthc83slpg Thu Dec 15 2022 14:48:09 GMT+0000 (Greenwich Mean Time) with  darwin/x64} -->
+<!-- {build-by-hash:wd3oqrxae Thu Dec 15 2022 23:46:10 GMT+0000 (Greenwich Mean Time) with  darwin/x64} -->
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -111,6 +111,7 @@ body {
 #shell #requestEditorHost .CodeMirror-wrap pre.CodeMirror-line, .CodeMirror-wrap pre.CodeMirror-line-like {
   /* this is LINED-PAPER */
   border-bottom: solid 1px #f0f0f0;
+  border-bottom-color: rgba(147, 142, 142, 0.14);
 }
 
 #shell #requestEditorHost .CodeMirror-code pre.CodeMirror-line .lined-paper {
@@ -191,6 +192,33 @@ body {
 #shell .tabs-headers-container .tab-header.inactive .tab-label {
   transform: translateY(-0.15em);
 }
+
+#shell .tab-content.bottom-raw-reply .CodeMirror-lines {
+  background: #eee;
+}
+
+#shell .tab-content.bottom-raw-reply .CodeMirror-lines pre {
+  border-bottom: solid 1px #f0f0f0;
+  border-bottom-color: rgba(147, 142, 142, 0.14);
+}
+
+#shell .tab-content.bottom-raw-reply .CodeMirror-lines pre .lined-paper {
+  background: repeating-linear-gradient(to bottom, #ddd, #ddd 1px, #eee 1px, #eee 1.25em);
+}
+
+#shell .tab-content.bottom-structured-reply .CodeMirror-lines {
+  background: #e1fdff;
+}
+
+#shell .tab-content.bottom-structured-reply .CodeMirror-lines pre {
+  border-bottom: solid 1px #6ae8ff;
+  border-bottom-color: rgba(0, 107, 212, 0.14);
+}
+
+#shell .tab-content.bottom-structured-reply .CodeMirror-lines pre .lined-paper {
+  background: repeating-linear-gradient(to bottom, #c0f3ff, #c0f3ff 1px, #e1fdff 1px, #e1fdff 1.25em);
+}
+
 
 #shell .CodeMirror-guttermarker-subtle {
   color: #ffdc22;
@@ -322,7 +350,7 @@ body {
 #shell #editorModeSidebar button.pressed .mod-button-content {
   transform: translate(2px, 2px);
 }
-.cssAuthenticityMarker{font: inherit; /* {hex:21sctq24xze} */}
+.cssAuthenticityMarker{font: inherit; /* {hex:166oc5z33w1} */}
 </style>
 </head><body><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto Sans Math">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto Sans">

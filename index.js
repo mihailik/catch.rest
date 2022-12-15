@@ -1176,6 +1176,7 @@ body {
 #shell #requestEditorHost .CodeMirror-wrap pre.CodeMirror-line, .CodeMirror-wrap pre.CodeMirror-line-like {
   / * this is LINED-PAPER * /
   border-bottom: solid 1px #f0f0f0;
+  border-bottom-color: rgba(147, 142, 142, 0.14);
 }
 
 #shell #requestEditorHost .CodeMirror-code pre.CodeMirror-line .lined-paper {
@@ -1256,6 +1257,33 @@ body {
 #shell .tabs-headers-container .tab-header.inactive .tab-label {
   transform: translateY(-0.15em);
 }
+
+#shell .tab-content.bottom-raw-reply .CodeMirror-lines {
+  background: #eee;
+}
+
+#shell .tab-content.bottom-raw-reply .CodeMirror-lines pre {
+  border-bottom: solid 1px #f0f0f0;
+  border-bottom-color: rgba(147, 142, 142, 0.14);
+}
+
+#shell .tab-content.bottom-raw-reply .CodeMirror-lines pre .lined-paper {
+  background: repeating-linear-gradient(to bottom, #ddd, #ddd 1px, #eee 1px, #eee 1.25em);
+}
+
+#shell .tab-content.bottom-structured-reply .CodeMirror-lines {
+  background: #e1fdff;
+}
+
+#shell .tab-content.bottom-structured-reply .CodeMirror-lines pre {
+  border-bottom: solid 1px #6ae8ff;
+  border-bottom-color: rgba(0, 107, 212, 0.14);
+}
+
+#shell .tab-content.bottom-structured-reply .CodeMirror-lines pre .lined-paper {
+  background: repeating-linear-gradient(to bottom, #c0f3ff, #c0f3ff 1px, #e1fdff 1px, #e1fdff 1.25em);
+}
+
 
 #shell .CodeMirror-guttermarker-subtle {
   color: #ffdc22;
@@ -6280,6 +6308,15 @@ on(div, "touchstart", function () {
         /** @type {ReturnType<typeof createPlainTextSidebarLayout>} */
         var plainTextSidebarLayout;
 
+        var _lang;
+        function getTypeScriptLanguageService() {
+          if (_lang) return Promise.resolve(/** @type {ReturnType<typeof createTypeScriptLanguageService>} */(_lang));
+          return waitForTypeScriptLoad().then(function (ts) {
+            if (!_lang) _lang = createTypeScriptLanguageService(ts);
+            return /** @type {ReturnType<typeof createTypeScriptLanguageService>} */(_lang);
+          });
+        }
+
         /** @type {{
          *  withSplitter: ReturnType<typeof requireSplitter>;
          *  tabs?: ReturnType<typeof createTabs>;
@@ -6310,31 +6347,18 @@ on(div, "touchstart", function () {
           return /** @type {unknown} */_bottomDetailsInstance;
         }
 
-        function getBottomDetailsWithTabs() {
-          var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetails>, 'tabs'>} */(
-            getBottomDetails());
-          if (bt.tabs) return bt;
-
-          bt.tabs = createTabs({ host: bt.withSplitter.bottomHost });
-          return bt;
-        }
-
-        /** @param {string=} text */
-        function getBottomDetailsWithRawReply(text) {
-          var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetailsWithTabs>, 'rawReply'>} */(
-            getBottomDetailsWithTabs());
-          if (bt.rawReply) {
-            if (typeof text === 'string') bt.rawReply.editor.setValue(text);
-            return bt;
-          }
-
-          var tab = bt.tabs.addTab({ accent: 'silver', label: 'Reply' });
+        /** @param {{
+         *  host: HTMLElement;
+         *  text: string;
+         *  onFocus: () => void;
+         * }} opts */
+        function createBottomCodeMirror(opts) {
           var cm =
             //@ts-ignore
             CodeMirror(
-              tab.content,
+              opts.host,
               {
-                value: text || '',
+                value: opts.text,
 
                 mode: 'javascript',
 
@@ -6349,10 +6373,11 @@ on(div, "touchstart", function () {
                 readOnly: true,
                 lineWrapping: true
               });
+
           var copyFocus = cm.focus.bind(cm);
           cm.focus = function () {
             copyFocus();
-            bt.tabs.switchToTab(tab);
+            opts.onFocus();
             setTimeout(function () {
               copyFocus();
             }, 10);
@@ -6361,6 +6386,35 @@ on(div, "touchstart", function () {
           tabBetweenEditors.push(cm);
 
           addLinedPaperHandling(cm);
+
+          return cm;
+        }
+
+        function getBottomDetailsWithTabs() {
+          var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetails>, 'tabs'>} */(
+            getBottomDetails());
+          if (bt.tabs) return bt;
+
+          bt.tabs = createTabs({ host: bt.withSplitter.bottomHost });
+          return bt;
+        }
+
+        /** @param {string=} text */
+        function  getBottomDetailsWithRawReply(text) {
+          var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetailsWithTabs>, 'rawReply'>} */(
+            getBottomDetailsWithTabs());
+          if (bt.rawReply) {
+            if (typeof text === 'string') bt.rawReply.editor.setValue(text);
+            return bt;
+          }
+
+          var tab = bt.tabs.addTab({ accent: 'silver', label: 'Reply' });
+          var cm = createBottomCodeMirror({
+            host: tab.content,
+            text: text || '',
+            onFocus: function () { bt.tabs.switchToTab(tab); }
+          });
+          tab.content.className += ' bottom-raw-reply';
 
           var rawReply = {
             editor: cm,
@@ -6381,38 +6435,12 @@ on(div, "touchstart", function () {
 
           var tab = bt.tabs.addTab({ accent: '#02cccc', label: 'Data' });
 
-          var cm =
-            //@ts-ignore
-            CodeMirror(
-              tab.content,
-              {
-                value: '',
-
-                mode: 'javascript',
-
-                // @ts-ignore
-                foldGutter: true,
-                gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
-                extraKeys: {
-                  Tab: executeTabKeyCommand
-                },
-
-                lineNumbers: true,
-                readOnly: true,
-                lineWrapping: true
-              });
-          var copyFocus = cm.focus.bind(cm);
-          cm.focus = function () {
-            copyFocus();
-            bt.tabs.switchToTab(tab);
-            setTimeout(function () {
-              copyFocus();
-            }, 10);
-          };
-
-          tabBetweenEditors.push(cm);
-
-          addLinedPaperHandling(cm);
+          var cm = createBottomCodeMirror({
+            host: tab.content,
+            text: '',
+            onFocus: function () { bt.tabs.switchToTab(tab) }
+          });
+          tab.content.className += ' bottom-structured-reply';
 
           var structuredReply = {
             tab: tab,
@@ -7057,37 +7085,24 @@ on(div, "touchstart", function () {
                 var bts = getBottomDetailsWithStructuredReply();
                 bts.structuredReply.editor.setValue('PROCESSING  ' + text);
 
-                waitForTypeScriptLoad().then(
-                  function (ts) {
+                getTypeScriptLanguageService().then(function (lang) {
                     if (lastSendRequestInstance !== sendRequestInstance) return;
 
-                    var replyScriptSnapshot = ts.ScriptSnapshot.fromString(text);
-                    var settings = ts.getDefaultCompilerOptions();
-                    var host = {
-                      getCompilationSettings,
-                      getScriptFileNames,
-                      getScriptVersion,
-                      getScriptSnapshot,
-                      getCurrentDirectory,
-                      getDefaultLibFileName,
-                      readFile,
-                      fileExists
-                    };
-                    var ls = ts.createLanguageService(host);
                     var replyFilename =
-                      /^\s*\{/.test(text) && /\}\s*$/.test(text) ? 'reply.json' : 'reply.js';
+                      /^\s*\{/.test(text) && /\}\s*$/.test(text) ? '/reply.json' : '/reply.js';
+                    lang.setScriptText(replyFilename, text);
 
                     try {
-                      var fmts = ls.getFormattingEditsForDocument(replyFilename, {
+                      var fmts = lang.languageService.getFormattingEditsForDocument(replyFilename, {
                         ConvertTabsToSpaces: true,
                         convertTabsToSpaces: true,
                         IndentSize: 2,
                         indentSize: 2,
-                        IndentStyle: ts.IndentStyle.Smart,
+                        IndentStyle: lang.ts.IndentStyle.Smart,
                         TabSize: 2,
                         tabSize: 2,
                         trimTrailingWhitespace: true,
-                        semicolons: ts.SemicolonPreference.Ignore
+                        semicolons: lang.ts.SemicolonPreference.Ignore
                       });
                     } catch (tsError) {
                       fmts = [];
@@ -7122,41 +7137,6 @@ on(div, "touchstart", function () {
                     setTimeout(function () {
                       bts.structuredReply.editor.refresh();
                     }, 100);
-
-                    function getCompilationSettings() {
-                      return settings;
-                    }
-
-                    function getScriptFileNames() {
-                      return ['/' + replyFilename];
-                    }
-
-                    /** @param {string} file */
-                    function getScriptVersion(file) {
-                      return '1';
-                    }
-
-                    /** @param {string} file */
-                    function getScriptSnapshot(file) {
-                      if (file.indexOf(replyFilename) >=0) return replyScriptSnapshot;
-                    }
-
-                    function getCurrentDirectory() {
-                      return '/';
-                    }
-
-                    function getDefaultLibFileName() {
-                      return '/lib.d.ts';
-                    }
-
-                    function readFile(file) {
-                      if (file.indexOf(replyFilename) >= 0) return text;
-                      else return void 0;
-                    }
-
-                    function fileExists(file) {
-                      return file.indexOf(replyFilename) >= 0;
-                    }
                   }
                 );
               }
@@ -7597,6 +7577,104 @@ Send this to test?
         });
 
       }
+    }
+
+    /** @param {import('typescript')} ts */
+    function createTypeScriptLanguageService(ts) {
+
+      var host = {
+        getCompilationSettings,
+        getScriptFileNames,
+        getScriptVersion,
+        getScriptSnapshot,
+        getCurrentDirectory,
+        getDefaultLibFileName,
+        readFile,
+        fileExists
+      };
+
+      /** @type {{
+       * [fileName: string]: {
+       *    name: string;
+       *    text: string;
+       *    snapshot: import('typescript').IScriptSnapshot;
+       *    version: string;
+       *  }
+       * }} */
+      var scripts = {};
+      /** @type {string[]} */
+      var scriptFileNames = [];
+
+      var ls = ts.createLanguageService(host);
+
+      var lang = {
+        ts: ts,
+        options: ts.getDefaultCompilerOptions(),
+        languageService: ls,
+        setScriptText: setScriptText
+      };
+
+      return lang;
+
+      /**
+       * @param {string} name
+       * @param {string} text
+       */
+      function setScriptText(name, text) {
+        var script = scripts[name];
+        if (script) {
+          if (script.text === text) return;
+          script.text = text;
+          script.snapshot = ts.ScriptSnapshot.fromString(text);
+          script.version = String(Number(script.version) + 1);
+        } else {
+          script = {
+            name: name,
+            text: text,
+            snapshot: ts.ScriptSnapshot.fromString(text),
+            version: '0'
+          };
+          scripts[name] = script;
+        }
+      }
+
+      function getCompilationSettings() {
+        return lang.options;
+      }
+
+      function getScriptFileNames() {
+        return scriptFileNames;
+      }
+
+      /** @param {string} file */
+      function getScriptVersion(file) {
+        var script = scripts[file];
+        return script ? script.version : '';
+      }
+
+      /** @param {string} file */
+      function getScriptSnapshot(file) {
+        var script = scripts[file];
+        return script && script.snapshot;
+      }
+
+      function getCurrentDirectory() {
+        return '/';
+      }
+
+      function getDefaultLibFileName() {
+        return '/~lib.d.ts';
+      }
+
+      function readFile(file) {
+        var script = scripts[file];
+        return script && script.text;
+      }
+
+      function fileExists(file) {
+        return !!scripts[file];
+      }
+
     }
 
     /**
