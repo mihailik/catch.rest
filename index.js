@@ -1,4 +1,5 @@
-// @ts-check <script>
+// @ts-check
+// <script>
 /// <reference path="./websql.d.ts" />
 /// <reference types="codemirror" />
 
@@ -343,6 +344,17 @@ function catchREST() {
 
   }
 
+  if (typeof Math.imul !== 'function') (function () {
+    /**
+     * @param {number} x
+     * @param {number} y
+     */
+    function imul(x, y) {
+      return (x * y) | 0;
+    }
+    Math.imul = imul;
+  })();
+
   // #endregion
 
   // #region SHARED FUNCTIONALITY
@@ -650,16 +662,231 @@ function catchREST() {
     return 4294967296 * (2097151 & h2) + (h1 >>> 0);
   }
 
-  if (typeof Math.imul !== 'function') (function () {
-    /**
-     * @param {number} x
-     * @param {number} y
-     */
-    function imul(x, y) {
-      return (x * y) | 0;
+
+  /** @typedef {import('typescript').Node & { highlightModifier?: string, trail?: number }} RichNode */
+
+  /**
+   * @param {string} text
+   * @param {import('typescript')} ts
+   */
+  function parseJsonLike(text, ts) {
+    var asJson = /^\s*\{/.test(text) && /\}\s*$/.test(text);
+    var madeUpFilename = asJson ? 'file.json' : 'file.js';
+    var script =
+      ts.createLanguageServiceSourceFile(
+        madeUpFilename,
+        ts.ScriptSnapshot.fromString(text.replace(/\s+$/, '')),
+        ts.ScriptTarget.Latest,
+        ts.version,
+        true,
+        asJson ? ts.ScriptKind.JSON : ts.ScriptKind.JSX
+      );
+
+    /** @type {RichNode} */
+    var topMostNode = script;
+
+    var spans = [{
+      pos: script.pos,
+      node: /** @type {RichNode} */(script)
+    }];
+    var spanBestStart = 0;
+
+    /** @type {RichNode[]} */
+    var nodeParents = [];
+
+    ts.forEachChild(script, visitNodeOuter);
+
+    return {
+      script: script,
+      topMostNode: topMostNode,
+      lineStarts: script.getLineStarts(),
+      getSpanIndexAt: findPosSpan,
+      getSpanAt: getSpanAt,
+      spans: spans.map(function (sp, index) {
+        return {
+          pos: sp.pos,
+          lead: sp.node.getLeadingTriviaWidth() || void 0,
+          node: sp.node,
+          text: text.slice(sp.pos + sp.node.getLeadingTriviaWidth(), index < spans.length - 1 ? spans[index + 1].pos : text.length),
+          kind: ts.SyntaxKind[sp.node.kind],
+          highlightModifier: sp.node.highlightModifier
+        };
+      })
+    };
+
+    function getSpanAt(pos) {
+      return spans[findPosSpan(pos)];
     }
-    Math.imul = imul;
-  })();
+
+    /** @param {RichNode} node */
+    function visitNodeOuter(node) {
+      visitNode(node);
+      nodeParents.push(node);
+      ts.forEachChild(node, visitNodeOuter);
+      nodeParents.pop();
+    }
+
+    /** @param {RichNode} node */
+    function visitNode(node) {
+      var leading = node.getLeadingTriviaWidth(script);
+      if (node.pos - leading === script.pos && node.end === script.end) topMostNode = node;
+
+      updateSpans(node);
+
+      if (ts.isArrayLiteralExpression(node)) {
+
+      } else if (ts.isObjectLiteralExpression(node)) {
+
+      } else if (ts.isPropertyAssignment(node)) {
+        if (ts.isStringLiteralLike(node.name)) {
+          /** @type {RichNode} */(node.name).highlightModifier = 'property-name';
+        }
+      }
+    }
+
+    /** @param {RichNode} node */
+    function updateSpans(node) {
+      if (node.end === node.pos) return;
+
+      var spanIndex = findPosSpan(node.pos);
+      var parentSpan = spans[spanIndex];
+
+      var peekBefore = node.pos - parentSpan.pos;
+      var peekAfter = parentSpan.pos + parentSpan.length - node.end;
+
+      if (peekBefore) {
+        if (peekAfter) {
+          spans.splice(spanIndex + 1, 0,
+            { pos: node.pos, node: node },
+            { pos: parentSpan.start + parentSpan.length - peekAfter, node: parentSpan.node });
+        } else {
+          spans.splice(spanIndex + 1, 0,
+            { pos: node.pos, node: node });
+        }
+      } else {
+        if (peekAfter) {
+          spans.splice(spanIndex, 0,
+            { pos: node.pos, node: node });
+          parentSpan.pos = node.end;
+        } else {
+          parentSpan.node = node;
+          parentSpan.pos = node.pos;
+        }
+      }
+    }
+
+    /** @param {number} pos */
+    function findPosSpan(pos) {
+      var mid = spanBestStart;
+      var start = 0, end = spans.length;
+      while (true) {
+        if (pos < spans[mid].pos) {
+          end = mid;
+        } else if (mid < spans.length - 1 && pos >= spans[mid + 1].pos) {
+          var start = mid +1;
+        } else return mid;
+        mid = ((start + end) / 2) | 0;
+      }
+    }
+  }
+
+  /** @param {import('typescript')} ts */
+  function createTypeScriptLanguageService(ts) {
+
+    var host = {
+      getCompilationSettings,
+      getScriptFileNames,
+      getScriptVersion,
+      getScriptSnapshot,
+      getCurrentDirectory,
+      getDefaultLibFileName,
+      readFile,
+      fileExists
+    };
+
+    /** @type {{
+     * [fileName: string]: {
+     *    name: string;
+     *    text: string;
+     *    snapshot: import('typescript').IScriptSnapshot;
+     *    version: string;
+     *  }
+     * }} */
+    var scripts = {};
+    /** @type {string[]} */
+    var scriptFileNames = [];
+
+    var ls = ts.createLanguageService(host);
+
+    var lang = {
+      ts: ts,
+      options: ts.getDefaultCompilerOptions(),
+      languageService: ls,
+      setScriptText: setScriptText
+    };
+
+    return lang;
+
+    /**
+     * @param {string} name
+     * @param {string} text
+     */
+    function setScriptText(name, text) {
+      var script = scripts[name];
+      if (script) {
+        if (script.text === text) return;
+        script.text = text;
+        script.snapshot = ts.ScriptSnapshot.fromString(text);
+        script.version = String(Number(script.version) + 1);
+      } else {
+        script = {
+          name: name,
+          text: text,
+          snapshot: ts.ScriptSnapshot.fromString(text),
+          version: '0'
+        };
+        scripts[name] = script;
+      }
+    }
+
+    function getCompilationSettings() {
+      return lang.options;
+    }
+
+    function getScriptFileNames() {
+      return scriptFileNames;
+    }
+
+    /** @param {string} file */
+    function getScriptVersion(file) {
+      var script = scripts[file];
+      return script ? script.version : '';
+    }
+
+    /** @param {string} file */
+    function getScriptSnapshot(file) {
+      var script = scripts[file];
+      return script && script.snapshot;
+    }
+
+    function getCurrentDirectory() {
+      return '/';
+    }
+
+    function getDefaultLibFileName() {
+      return '/~lib.d.ts';
+    }
+
+    function readFile(file) {
+      var script = scripts[file];
+      return script && script.text;
+    }
+
+    function fileExists(file) {
+      return !!scripts[file];
+    }
+
+  }
 
   //#endregion SHARED FUNCTIONALITY
 
@@ -5725,6 +5952,82 @@ on(div, "touchstart", function () {
     }
     // #endregion
 
+    // #region CODEMIRROR RESPONSE JSON MODE
+    /** @typedef {{
+     *  fileText: string;
+     *  parsedJson: ReturnType<typeof parseJsonLike>;
+     *  line: number;
+     * }} JSONReplyModeState */
+    /** @type {import('codemirror').ModeFactory<JSONReplyModeState>} */
+    function jsonReplyMode(config, modeOptions) {
+      return {
+        name: 'rest-request',
+        token: processToken,
+        blankLine: processBlankLine,
+        startState: defineStartState
+      };
+
+      function defineStartState() {
+        var configWithValue = /** @type {{ getValue?: () => string, ts?: import('typescript') }} */(config);
+        var ts = /** @type {import('typescript')} */(configWithValue.ts);
+        var fileText = configWithValue.getValue ? configWithValue.getValue() : '';
+
+        var parsedJson = parseJsonLike(fileText, ts);
+        return {
+          fileText: fileText,
+          parsedJson: parsedJson,
+          line: 0
+        };
+      }
+
+      /**
+       * @param {JSONReplyModeState} state
+       */
+      function processBlankLine(state) {
+        state.line++;
+      }
+
+      /**
+       * @param {import('codemirror').StringStream} stream
+       * @param {JSONReplyModeState} state
+       */
+      function processToken(stream, state) {
+        var lineStartPos = state.parsedJson.lineStarts[state.line];
+        var currentSpanIndex = state.parsedJson.getSpanIndexAt(lineStartPos + stream.pos);
+        var spanCh = stream.pos;
+        var currentSpan = state.parsedJson.spans[currentSpanIndex];
+        // var skipLead = !currentSpan.lead ? 0 :
+        //   currentSpan.pos + currentSpan.lead - (lineStartPos + currentSpan.pos);
+        // if (skipLead) {
+        //   for (var i = 0; i < skipLead; i++) {
+        //     stream.next();
+        //   }
+
+        //   return 'line' + state.line + ' ' + 'ch' + spanCh + ' ' + (
+        //     'lead-space-' + currentSpan.highlightModifier ? currentSpan.highlightModifier + ' lead-space-' + currentSpan.kind :
+        //       'lead-space-' + currentSpan.kind
+        //   );
+        // }
+
+        var nextSpan = state.parsedJson.spans[currentSpanIndex + 1];
+        if (!nextSpan) {
+          stream.skipToEnd();
+        } else {
+          for (var i = stream.pos; i < nextSpan.pos - lineStartPos; i++) {
+            stream.next();
+          }
+        }
+        if (stream.eol())
+          state.line++;
+
+        return 'line' + state.line + ' ' + 'ch' + spanCh +' ' + (
+          currentSpan.highlightModifier ? currentSpan.highlightModifier + ' ' + currentSpan.kind :
+            currentSpan.kind
+        );
+      }
+    }
+    // #endregion
+
     /**
      * @returns {Promise<import('typescript')>}
      */
@@ -6254,6 +6557,7 @@ on(div, "touchstart", function () {
         // @ts-ignore
         CodeMirror
           .defineMode('rest-request', restRequestMode);
+        var replyModeDefined = false;
 
         layout.requestEditorHost.innerHTML = '';
         /** @type {import('codemirror').EditorConfiguration} */
@@ -6303,6 +6607,8 @@ on(div, "touchstart", function () {
 
         addLinedPaperHandling(editor);
 
+        getTypeScriptLanguageService();
+
         /** @type {ReturnType<typeof createRequestVerbSidebarLayout>} */
         var requestVerbSidebarLayout;
         /** @type {ReturnType<typeof createPlainTextSidebarLayout>} */
@@ -6348,19 +6654,34 @@ on(div, "touchstart", function () {
         }
 
         /** @param {{
+         *  ts: import('typescript');
          *  host: HTMLElement;
          *  text: string;
          *  onFocus: () => void;
          * }} opts */
         function createBottomCodeMirror(opts) {
+          if (!replyModeDefined) {
+            // @ts-ignore
+            CodeMirror
+              .defineMode('rest-reply', function (config, modeOptions) {
+                /** @type {typeof config & {ts?: import('typescript'), getValue?(): string }} */
+                var configClone = Object.assign({}, config);
+                configClone.ts = opts.ts;
+                return jsonReplyMode(configClone, modeOptions);
+              });
+            replyModeDefined = true;
+          }
+
           var cm =
             //@ts-ignore
             CodeMirror(
               opts.host,
               {
                 value: opts.text,
+                // @ts-ignore
+                getValue: function () { return cm ? cm.getValue() : opts.text;  },
 
-                mode: 'javascript',
+                mode: 'rest-reply',
 
                 // @ts-ignore
                 foldGutter: true,
@@ -6399,8 +6720,8 @@ on(div, "touchstart", function () {
           return bt;
         }
 
-        /** @param {string=} text */
-        function  getBottomDetailsWithRawReply(text) {
+        /** @param {import('typescript')} ts @param {string=} text */
+        function  getBottomDetailsWithRawReply(ts, text) {
           var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetailsWithTabs>, 'rawReply'>} */(
             getBottomDetailsWithTabs());
           if (bt.rawReply) {
@@ -6410,6 +6731,7 @@ on(div, "touchstart", function () {
 
           var tab = bt.tabs.addTab({ accent: 'silver', label: 'Reply' });
           var cm = createBottomCodeMirror({
+            ts: ts,
             host: tab.content,
             text: text || '',
             onFocus: function () { bt.tabs.switchToTab(tab); }
@@ -6425,9 +6747,10 @@ on(div, "touchstart", function () {
           return bt;
         }
 
-        function getBottomDetailsWithStructuredReply() {
+        /** @param {import('typescript')} ts */
+        function getBottomDetailsWithStructuredReply(ts) {
           var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetailsWithRawReply>, 'structuredReply'>} */(
-            getBottomDetailsWithRawReply());
+            getBottomDetailsWithRawReply(ts));
           if (bt.structuredReply) {
             bt.tabs.switchToTab(bt.structuredReply.tab);
             return bt;
@@ -6436,6 +6759,7 @@ on(div, "touchstart", function () {
           var tab = bt.tabs.addTab({ accent: '#02cccc', label: 'Data' });
 
           var cm = createBottomCodeMirror({
+            ts: ts,
             host: tab.content,
             text: '',
             onFocus: function () { bt.tabs.switchToTab(tab) }
@@ -7068,29 +7392,34 @@ on(div, "touchstart", function () {
               if (lastSendRequestInstance !== sendRequestInstance) return;
 
               var replyTime = getTimeNow() - startTime;
-              var headers = response.headers;
-              var text = response.body;
-              editor.setOption('readOnly', false);
+              getTypeScriptLanguageService().then(function (lang) {
+                var headers = response.headers;
+                /** @type {string} */
+                var text = response.body;
+                editor.setOption('readOnly', false);
 
-              var bt = getBottomDetailsWithRawReply(text);
-              set(bt.withSplitter.splitterMainPanel, 'Done: ' + (replyTime / 1000) + 's.');
+                var bt = getBottomDetailsWithRawReply(lang.ts, text);
+                set(bt.withSplitter.splitterMainPanel, 'Done: ' + (replyTime / 1000) + 's.');
 
-              if (!text) {
-                if (bt.structuredReply) {
-                  bt.structuredReply.editor.setValue('');
-                  if (bt.structuredReply.editor.hasFocus())
-                    bt.rawReply.editor.focus();
-                }
-              } else {
-                var bts = getBottomDetailsWithStructuredReply();
-                bts.structuredReply.editor.setValue('PROCESSING  ' + text);
+                if (!text) {
+                  if (bt.structuredReply) {
+                    bt.structuredReply.editor.setValue('');
+                    if (bt.structuredReply.editor.hasFocus())
+                      bt.rawReply.editor.focus();
+                  }
+                } else {
+                  getTypeScriptLanguageService().then(function (lang) {
+                    var bts = getBottomDetailsWithStructuredReply(lang.ts);
+                    bts.structuredReply.editor.setValue('PROCESSING  ' + text);
 
-                getTypeScriptLanguageService().then(function (lang) {
                     if (lastSendRequestInstance !== sendRequestInstance) return;
 
                     var replyFilename =
                       /^\s*\{/.test(text) && /\}\s*$/.test(text) ? '/reply.json' : '/reply.js';
                     lang.setScriptText(replyFilename, text);
+
+                    var parsedJson = parseJsonLike(text, lang.ts);
+                    console.log(parsedJson);
 
                     try {
                       var fmts = lang.languageService.getFormattingEditsForDocument(replyFilename, {
@@ -7138,8 +7467,9 @@ on(div, "touchstart", function () {
                       bts.structuredReply.editor.refresh();
                     }, 100);
                   }
-                );
-              }
+                  );
+                }
+              });
             },
             function (err) {
               if (lastSendRequestInstance !== sendRequestInstance) return;
@@ -7577,104 +7907,6 @@ Send this to test?
         });
 
       }
-    }
-
-    /** @param {import('typescript')} ts */
-    function createTypeScriptLanguageService(ts) {
-
-      var host = {
-        getCompilationSettings,
-        getScriptFileNames,
-        getScriptVersion,
-        getScriptSnapshot,
-        getCurrentDirectory,
-        getDefaultLibFileName,
-        readFile,
-        fileExists
-      };
-
-      /** @type {{
-       * [fileName: string]: {
-       *    name: string;
-       *    text: string;
-       *    snapshot: import('typescript').IScriptSnapshot;
-       *    version: string;
-       *  }
-       * }} */
-      var scripts = {};
-      /** @type {string[]} */
-      var scriptFileNames = [];
-
-      var ls = ts.createLanguageService(host);
-
-      var lang = {
-        ts: ts,
-        options: ts.getDefaultCompilerOptions(),
-        languageService: ls,
-        setScriptText: setScriptText
-      };
-
-      return lang;
-
-      /**
-       * @param {string} name
-       * @param {string} text
-       */
-      function setScriptText(name, text) {
-        var script = scripts[name];
-        if (script) {
-          if (script.text === text) return;
-          script.text = text;
-          script.snapshot = ts.ScriptSnapshot.fromString(text);
-          script.version = String(Number(script.version) + 1);
-        } else {
-          script = {
-            name: name,
-            text: text,
-            snapshot: ts.ScriptSnapshot.fromString(text),
-            version: '0'
-          };
-          scripts[name] = script;
-        }
-      }
-
-      function getCompilationSettings() {
-        return lang.options;
-      }
-
-      function getScriptFileNames() {
-        return scriptFileNames;
-      }
-
-      /** @param {string} file */
-      function getScriptVersion(file) {
-        var script = scripts[file];
-        return script ? script.version : '';
-      }
-
-      /** @param {string} file */
-      function getScriptSnapshot(file) {
-        var script = scripts[file];
-        return script && script.snapshot;
-      }
-
-      function getCurrentDirectory() {
-        return '/';
-      }
-
-      function getDefaultLibFileName() {
-        return '/~lib.d.ts';
-      }
-
-      function readFile(file) {
-        var script = scripts[file];
-        return script && script.text;
-      }
-
-      function fileExists(file) {
-        return !!scripts[file];
-      }
-
     }
 
     /**
