@@ -667,20 +667,35 @@ function catchREST() {
 
   /**
    * @param {string} text
-   * @param {import('typescript')} ts
+   * @param {ReturnType<typeof createTypeScriptLanguageService>} lang
    */
-  function parseJsonLike(text, ts) {
+  function parseJsonLike(text, lang) {
     var asJson = /^\s*\{/.test(text) && /\}\s*$/.test(text);
-    var madeUpFilename = asJson ? 'file.json' : 'file.js';
-    var script =
-      ts.createLanguageServiceSourceFile(
+    var madeUpFilename = asJson ? '/file.json' : '/file.js';
+    lang.setScriptText(madeUpFilename, text);
+    var prog = lang.languageService.getProgram();
+    var script = /** @type {import('typescript').SourceFile} */(prog && prog.getSourceFile('/' + madeUpFilename));
+    if (!script) {
+      script = lang.ts.createLanguageServiceSourceFile(
         madeUpFilename,
-        ts.ScriptSnapshot.fromString(text.replace(/\s+$/, '')),
-        ts.ScriptTarget.Latest,
-        ts.version,
+        lang.ts.ScriptSnapshot.fromString(text.replace(/\s+$/, '')),
+        lang.ts.ScriptTarget.Latest,
+        lang.ts.version,
         true,
-        asJson ? ts.ScriptKind.JSON : ts.ScriptKind.JSX
+        asJson ? lang.ts.ScriptKind.JSON : lang.ts.ScriptKind.JSX
       );
+
+      if (typeof console !== 'undefined' && console && typeof console.log === 'function')
+        console.log('No script for ' + madeUpFilename, prog);
+    }
+
+    var highlights = lang.languageService.getSyntacticClassifications(
+      madeUpFilename,
+      { start: 0, length: text.length },
+      lang.ts.SemanticClassificationFormat.TwentyTwenty);
+    //var highlights = lang.languageService.getDocumentHighlights(madeUpFilename, 0, [madeUpFilename]);
+    if (typeof console !== 'undefined' && console && typeof console.log === 'function')
+      console.log('highlights ', highlights);
 
     /** @type {RichNode} */
     var topMostNode = script;
@@ -694,7 +709,7 @@ function catchREST() {
     /** @type {RichNode[]} */
     var nodeParents = [];
 
-    ts.forEachChild(script, visitNodeOuter);
+    lang.ts.forEachChild(script, visitNodeOuter);
 
     return {
       script: script,
@@ -708,7 +723,7 @@ function catchREST() {
           lead: sp.node.getLeadingTriviaWidth() || void 0,
           node: sp.node,
           text: text.slice(sp.pos + sp.node.getLeadingTriviaWidth(), index < spans.length - 1 ? spans[index + 1].pos : text.length),
-          kind: ts.SyntaxKind[sp.node.kind],
+          kind: lang.ts.SyntaxKind[sp.node.kind],
           highlightModifier: sp.node.highlightModifier
         };
       })
@@ -722,7 +737,7 @@ function catchREST() {
     function visitNodeOuter(node) {
       visitNode(node);
       nodeParents.push(node);
-      ts.forEachChild(node, visitNodeOuter);
+      lang.ts.forEachChild(node, visitNodeOuter);
       nodeParents.pop();
     }
 
@@ -733,12 +748,12 @@ function catchREST() {
 
       updateSpans(node);
 
-      if (ts.isArrayLiteralExpression(node)) {
+      if (lang.ts.isArrayLiteralExpression(node)) {
 
-      } else if (ts.isObjectLiteralExpression(node)) {
+      } else if (lang.ts.isObjectLiteralExpression(node)) {
 
-      } else if (ts.isPropertyAssignment(node)) {
-        if (ts.isStringLiteralLike(node.name)) {
+      } else if (lang.ts.isPropertyAssignment(node)) {
+        if (lang.ts.isStringLiteralLike(node.name)) {
           /** @type {RichNode} */(node.name).highlightModifier = 'property-name';
         }
       }
@@ -813,6 +828,7 @@ function catchREST() {
      *  }
      * }} */
     var scripts = {};
+
     /** @type {string[]} */
     var scriptFileNames = [];
 
@@ -824,6 +840,10 @@ function catchREST() {
       languageService: ls,
       setScriptText: setScriptText
     };
+    lang.options.resolveJsonModule = true;
+    lang.options.esModuleInterop = true;
+    lang.options.allowJs = true;
+    lang.options.checkJs = true;
 
     return lang;
 
@@ -846,6 +866,7 @@ function catchREST() {
           version: '0'
         };
         scripts[name] = script;
+        scriptFileNames.push(name);
       }
     }
 
@@ -5968,11 +5989,11 @@ on(div, "touchstart", function () {
       };
 
       function defineStartState() {
-        var configWithValue = /** @type {{ getValue?: () => string, ts?: import('typescript') }} */(config);
-        var ts = /** @type {import('typescript')} */(configWithValue.ts);
+        var configWithValue = /** @type {{ getValue?: () => string, lang?: ReturnType<typeof createTypeScriptLanguageService> }} */(config);
+        var lang = /** @type {ReturnType<typeof createTypeScriptLanguageService>} */(configWithValue.lang);
         var fileText = configWithValue.getValue ? configWithValue.getValue() : '';
 
-        var parsedJson = parseJsonLike(fileText, ts);
+        var parsedJson = fileText ? parseJsonLike(fileText, lang) : void 0;
         return {
           fileText: fileText,
           parsedJson: parsedJson,
@@ -6654,7 +6675,7 @@ on(div, "touchstart", function () {
         }
 
         /** @param {{
-         *  ts: import('typescript');
+         *  lang: ReturnType<typeof createTypeScriptLanguageService>;
          *  host: HTMLElement;
          *  text: string;
          *  onFocus: () => void;
@@ -6664,9 +6685,9 @@ on(div, "touchstart", function () {
             // @ts-ignore
             CodeMirror
               .defineMode('rest-reply', function (config, modeOptions) {
-                /** @type {typeof config & {ts?: import('typescript'), getValue?(): string }} */
+                /** @type {typeof config & {lang?: ReturnType<typeof createTypeScriptLanguageService>, getValue?(): string }} */
                 var configClone = Object.assign({}, config);
-                configClone.ts = opts.ts;
+                configClone.lang = opts.lang;
                 return jsonReplyMode(configClone, modeOptions);
               });
             replyModeDefined = true;
@@ -6720,8 +6741,11 @@ on(div, "touchstart", function () {
           return bt;
         }
 
-        /** @param {import('typescript')} ts @param {string=} text */
-        function  getBottomDetailsWithRawReply(ts, text) {
+        /**
+         * @param {ReturnType<typeof createTypeScriptLanguageService>} lang
+         * @param {string=} text
+         */
+        function  getBottomDetailsWithRawReply(lang, text) {
           var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetailsWithTabs>, 'rawReply'>} */(
             getBottomDetailsWithTabs());
           if (bt.rawReply) {
@@ -6731,7 +6755,7 @@ on(div, "touchstart", function () {
 
           var tab = bt.tabs.addTab({ accent: 'silver', label: 'Reply' });
           var cm = createBottomCodeMirror({
-            ts: ts,
+            lang: lang,
             host: tab.content,
             text: text || '',
             onFocus: function () { bt.tabs.switchToTab(tab); }
@@ -6747,8 +6771,8 @@ on(div, "touchstart", function () {
           return bt;
         }
 
-        /** @param {import('typescript')} ts */
-        function getBottomDetailsWithStructuredReply(ts) {
+        /** @param {ReturnType<typeof createTypeScriptLanguageService>} lang */
+        function getBottomDetailsWithStructuredReply(lang) {
           var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetailsWithRawReply>, 'structuredReply'>} */(
             getBottomDetailsWithRawReply(ts));
           if (bt.structuredReply) {
@@ -6759,7 +6783,7 @@ on(div, "touchstart", function () {
           var tab = bt.tabs.addTab({ accent: '#02cccc', label: 'Data' });
 
           var cm = createBottomCodeMirror({
-            ts: ts,
+            lang: lang,
             host: tab.content,
             text: '',
             onFocus: function () { bt.tabs.switchToTab(tab) }
@@ -7398,7 +7422,7 @@ on(div, "touchstart", function () {
                 var text = response.body;
                 editor.setOption('readOnly', false);
 
-                var bt = getBottomDetailsWithRawReply(lang.ts, text);
+                var bt = getBottomDetailsWithRawReply(lang, text);
                 set(bt.withSplitter.splitterMainPanel, 'Done: ' + (replyTime / 1000) + 's.');
 
                 if (!text) {
@@ -7418,7 +7442,7 @@ on(div, "touchstart", function () {
                       /^\s*\{/.test(text) && /\}\s*$/.test(text) ? '/reply.json' : '/reply.js';
                     lang.setScriptText(replyFilename, text);
 
-                    var parsedJson = parseJsonLike(text, lang.ts);
+                    var parsedJson = parseJsonLike(text, lang);
                     console.log(parsedJson);
 
                     try {
