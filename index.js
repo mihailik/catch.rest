@@ -1,5 +1,4 @@
-// @ts-check
-// <script>
+// @ts-check <script>
 /// <reference path="./websql.d.ts" />
 /// <reference types="codemirror" />
 
@@ -662,9 +661,6 @@ function catchREST() {
     return 4294967296 * (2097151 & h2) + (h1 >>> 0);
   }
 
-
-  /** @typedef {import('typescript').Node & { highlightModifier?: string, trail?: number }} RichNode */
-
   /**
    * @param {string} text
    * @param {ReturnType<typeof createTypeScriptLanguageService>} lang
@@ -689,51 +685,119 @@ function catchREST() {
         console.log('No script for ' + madeUpFilename, prog);
     }
 
-    var highlights = lang.languageService.getSyntacticClassifications(
+    var highlights = /** @type {import('typescript').ClassifiedSpan[]} */(lang.languageService.getSyntacticClassifications(
       madeUpFilename,
       { start: 0, length: text.length },
-      lang.ts.SemanticClassificationFormat.TwentyTwenty);
-    //var highlights = lang.languageService.getDocumentHighlights(madeUpFilename, 0, [madeUpFilename]);
-    if (typeof console !== 'undefined' && console && typeof console.log === 'function')
-      console.log('highlights ', highlights);
+      lang.ts.SemanticClassificationFormat.Original
+    ));
 
-    /** @type {RichNode} */
+    /** @type {import('typescript').Node} */
     var topMostNode = script;
 
-    var spans = [{
+    var nodeSpans = [{
       pos: script.pos,
-      node: /** @type {RichNode} */(script)
+      node: /** @type {import('typescript').Node} */(script)
     }];
+    /** @type {import('typescript').Node[]} */
+    var nameNodes = [];
     var spanBestStart = 0;
 
-    /** @type {RichNode[]} */
     var nodeParents = [];
 
     lang.ts.forEachChild(script, visitNodeOuter);
+
+    /** @type {(typeof nodeSpans[0] & { highlight: string, text: string })[]} */
+    var highlightSpans = [];
+    var iHighlight = 0;
+    for (var iNodeSpan = 0; iNodeSpan < nodeSpans.length; iNodeSpan++) {
+      var sp = nodeSpans[iNodeSpan];
+      var spEnd = iNodeSpan < nodeSpans.length - 1 ? nodeSpans[iNodeSpan + 1].pos : text.length;
+
+      if (highlights[iHighlight].textSpan.start > sp.pos) {
+        highlightSpans.push({
+          pos: sp.pos,
+          node: sp.node,
+          highlight: '',
+          text: ''
+        });
+      }
+
+      while (iHighlight < highlights.length) {
+        var hl = highlights[iHighlight];
+        if (hl.textSpan.start > spEnd) break;
+
+        highlightSpans.push({
+          pos: Math.max(sp.pos, hl.textSpan.start),
+          node: sp.node,
+          highlight: hl.classificationType,
+          text: ''
+        });
+
+        iHighlight++;
+      }
+    }
+
+    for (var iHighlight = 0; iHighlight < highlightSpans.length; iHighlight++) {
+      var hlsp = highlightSpans[iHighlight];
+      hlsp.text =
+        iHighlight < highlightSpans.length - 1 ?
+          text.slice(hlsp.pos, highlightSpans[iHighlight + 1].pos) :
+          text.slice(hlsp.pos);
+    }
+
+    for (var iNameNode = 0; iNameNode < nameNodes.length; iNameNode++) {
+      var node = nameNodes[iNameNode];
+      var iHighlight = findPosSpan(node.pos, highlightSpans);
+      while (iHighlight < highlightSpans.length) {
+        var hlsp = highlightSpans[iHighlight];
+        if (hlsp.pos >= node.end) break;
+
+        var quoteMatch = /^(\s*\")(.+)(\"\s*)$/.exec(hlsp.text);
+
+        if (quoteMatch) {
+          var leadQ = highlightSpans[iHighlight] = Object.assign({}, hlsp);
+          leadQ.text = quoteMatch[1];
+          leadQ.highlight += ' property-name property-name-quote';
+
+          var trailQ = Object.assign({}, hlsp);
+          trailQ.text = quoteMatch[3];
+          trailQ.pos = hlsp.pos + hlsp.text.length - trailQ.text.length;
+          trailQ.highlight += ' property-name property-name-quote';
+
+          hlsp.pos += leadQ.text.length;
+          hlsp.highlight += ' property-name';
+          hlsp.text = quoteMatch[2];
+
+          highlightSpans.splice(iHighlight + 1, 0, hlsp, trailQ);
+          iHighlight += 3;
+        } else {
+          hlsp.highlight += ' property-name';
+          iHighlight++;
+        }
+      }
+    }
+
+    if (typeof console !== 'undefined' && console && typeof console.log === 'function')
+      console.log('highlights ', highlightSpans);
 
     return {
       script: script,
       topMostNode: topMostNode,
       lineStarts: script.getLineStarts(),
-      getSpanIndexAt: findPosSpan,
+      getSpanIndexAt: getSpanIndexAt,
       getSpanAt: getSpanAt,
-      spans: spans.map(function (sp, index) {
-        return {
-          pos: sp.pos,
-          lead: sp.node.getLeadingTriviaWidth() || void 0,
-          node: sp.node,
-          text: text.slice(sp.pos + sp.node.getLeadingTriviaWidth(), index < spans.length - 1 ? spans[index + 1].pos : text.length),
-          kind: lang.ts.SyntaxKind[sp.node.kind],
-          highlightModifier: sp.node.highlightModifier
-        };
-      })
+      spans: highlightSpans
     };
 
-    function getSpanAt(pos) {
-      return spans[findPosSpan(pos)];
+    function getSpanIndexAt(pos) {
+      return findPosSpan(pos, highlightSpans);
     }
 
-    /** @param {RichNode} node */
+    function getSpanAt(pos) {
+      return nodeSpans[findPosSpan(pos, highlightSpans)];
+    }
+
+    /** @param {import('typescript').Node} node */
     function visitNodeOuter(node) {
       visitNode(node);
       nodeParents.push(node);
@@ -741,12 +805,12 @@ function catchREST() {
       nodeParents.pop();
     }
 
-    /** @param {RichNode} node */
+    /** @param {import('typescript').Node} node */
     function visitNode(node) {
       var leading = node.getLeadingTriviaWidth(script);
       if (node.pos - leading === script.pos && node.end === script.end) topMostNode = node;
 
-      updateSpans(node);
+      updateNodeSpans(node);
 
       if (lang.ts.isArrayLiteralExpression(node)) {
 
@@ -754,33 +818,34 @@ function catchREST() {
 
       } else if (lang.ts.isPropertyAssignment(node)) {
         if (lang.ts.isStringLiteralLike(node.name)) {
-          /** @type {RichNode} */(node.name).highlightModifier = 'property-name';
+          nameNodes.push(node.name);
         }
       }
+
     }
 
-    /** @param {RichNode} node */
-    function updateSpans(node) {
+    /** @param {import('typescript').Node} node */
+    function updateNodeSpans(node) {
       if (node.end === node.pos) return;
 
-      var spanIndex = findPosSpan(node.pos);
-      var parentSpan = spans[spanIndex];
+      var spanIndex = findPosSpan(node.pos, nodeSpans);
+      var parentSpan = nodeSpans[spanIndex];
 
       var peekBefore = node.pos - parentSpan.pos;
       var peekAfter = parentSpan.pos + parentSpan.length - node.end;
 
       if (peekBefore) {
         if (peekAfter) {
-          spans.splice(spanIndex + 1, 0,
+          nodeSpans.splice(spanIndex + 1, 0,
             { pos: node.pos, node: node },
             { pos: parentSpan.start + parentSpan.length - peekAfter, node: parentSpan.node });
         } else {
-          spans.splice(spanIndex + 1, 0,
+          nodeSpans.splice(spanIndex + 1, 0,
             { pos: node.pos, node: node });
         }
       } else {
         if (peekAfter) {
-          spans.splice(spanIndex, 0,
+          nodeSpans.splice(spanIndex, 0,
             { pos: node.pos, node: node });
           parentSpan.pos = node.end;
         } else {
@@ -790,14 +855,17 @@ function catchREST() {
       }
     }
 
-    /** @param {number} pos */
-    function findPosSpan(pos) {
+    /**
+     * @param {number} pos
+     * @param {{pos: number}[]} nodeSpans
+     */
+    function findPosSpan(pos, nodeSpans) {
       var mid = spanBestStart;
-      var start = 0, end = spans.length;
+      var start = 0, end = nodeSpans.length;
       while (true) {
-        if (pos < spans[mid].pos) {
+        if (pos < nodeSpans[mid].pos) {
           end = mid;
-        } else if (mid < spans.length - 1 && pos >= spans[mid + 1].pos) {
+        } else if (mid < nodeSpans.length - 1 && pos >= nodeSpans[mid + 1].pos) {
           var start = mid +1;
         } else return mid;
         mid = ((start + end) / 2) | 0;
@@ -1663,6 +1731,15 @@ body {
 #shell #editorModeSidebar button.pressed .mod-button-content {
   transform: translate(2px, 2px);
 }
+
+#shell .CodeMirror pre .cm-property-name {
+  color: #08acbb;
+}
+
+#shell .CodeMirror pre .cm-property-name-quote {
+  color: #1ee2f4;
+}
+
 
   */});
     embeddedMinCSS_authenticityMarker = calcHash(embeddedMinCSS).toString(36);
@@ -6017,18 +6094,6 @@ on(div, "touchstart", function () {
         var currentSpanIndex = state.parsedJson.getSpanIndexAt(lineStartPos + stream.pos);
         var spanCh = stream.pos;
         var currentSpan = state.parsedJson.spans[currentSpanIndex];
-        // var skipLead = !currentSpan.lead ? 0 :
-        //   currentSpan.pos + currentSpan.lead - (lineStartPos + currentSpan.pos);
-        // if (skipLead) {
-        //   for (var i = 0; i < skipLead; i++) {
-        //     stream.next();
-        //   }
-
-        //   return 'line' + state.line + ' ' + 'ch' + spanCh + ' ' + (
-        //     'lead-space-' + currentSpan.highlightModifier ? currentSpan.highlightModifier + ' lead-space-' + currentSpan.kind :
-        //       'lead-space-' + currentSpan.kind
-        //   );
-        // }
 
         var nextSpan = state.parsedJson.spans[currentSpanIndex + 1];
         if (!nextSpan) {
@@ -6041,10 +6106,7 @@ on(div, "touchstart", function () {
         if (stream.eol())
           state.line++;
 
-        return 'line' + state.line + ' ' + 'ch' + spanCh +' ' + (
-          currentSpan.highlightModifier ? currentSpan.highlightModifier + ' ' + currentSpan.kind :
-            currentSpan.kind
-        );
+        return 'line' + state.line + ' ' + 'ch' + spanCh +' ' + currentSpan.highlight;
       }
     }
     // #endregion
@@ -6774,7 +6836,9 @@ on(div, "touchstart", function () {
         /** @param {ReturnType<typeof createTypeScriptLanguageService>} lang */
         function getBottomDetailsWithStructuredReply(lang) {
           var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetailsWithRawReply>, 'structuredReply'>} */(
-            getBottomDetailsWithRawReply(ts));
+            getBottomDetailsWithRawReply(lang)
+          );
+
           if (bt.structuredReply) {
             bt.tabs.switchToTab(bt.structuredReply.tab);
             return bt;
@@ -7433,7 +7497,7 @@ on(div, "touchstart", function () {
                   }
                 } else {
                   getTypeScriptLanguageService().then(function (lang) {
-                    var bts = getBottomDetailsWithStructuredReply(lang.ts);
+                    var bts = getBottomDetailsWithStructuredReply(lang);
                     bts.structuredReply.editor.setValue('PROCESSING  ' + text);
 
                     if (lastSendRequestInstance !== sendRequestInstance) return;
