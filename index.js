@@ -1737,7 +1737,7 @@ body {
 }
 
 #shell .CodeMirror pre .cm-property-name-quote {
-  color: #1ee2f4;
+  color: #73e5ef;
 }
 
 
