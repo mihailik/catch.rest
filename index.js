@@ -1636,6 +1636,7 @@ body {
 
 #shell #leftBar #leftTop {
   position: relative;
+  height: 100%;
 }
 
 #shell #leftBar #leftTop > * {
