@@ -3198,7 +3198,10 @@ on(div, "touchstart", function () {
           throw error;
         }
 
-        try { xhr.withCredentials = true; } catch (_assignmentError) { }
+        if (opts.withCredentials || opts.credentials === 'include') {
+          try { xhr.withCredentials = true; } catch (_assignmentError) { }
+        }
+
         try { xhr.onerror = handleOnerror; } catch (_assignmentError) { }
         xhr.onreadystatechange = handleOnreadystatechange;
 
@@ -6053,11 +6056,15 @@ on(div, "touchstart", function () {
     // #region CODEMIRROR RESPONSE JSON MODE
     /** @typedef {{
      *  fileText: string;
-     *  parsedJson: ReturnType<typeof parseJsonLike>;
+     *  parsedJson: ReturnType<typeof parseJsonLike> | undefined;
      *  line: number;
      * }} JSONReplyModeState */
     /** @type {import('codemirror').ModeFactory<JSONReplyModeState>} */
     function jsonReplyMode(config, modeOptions) {
+
+      /** @type {ReturnType<typeof createTypeScriptLanguageService> | undefined} */
+      var lang;
+
       return {
         name: 'rest-request',
         token: processToken,
@@ -6066,11 +6073,24 @@ on(div, "touchstart", function () {
       };
 
       function defineStartState() {
-        var configWithValue = /** @type {{ getValue?: () => string, lang?: ReturnType<typeof createTypeScriptLanguageService> }} */(config);
-        var lang = /** @type {ReturnType<typeof createTypeScriptLanguageService>} */(configWithValue.lang);
-        var fileText = configWithValue.getValue ? configWithValue.getValue() : '';
+        var configWithValue = /** @type {{ getCM?: () => import('codemirror').Editor, getLang?: () => (ReturnType<typeof createTypeScriptLanguageService> | Promise<ReturnType<typeof createTypeScriptLanguageService>>) }} */(config);
+        var useLang = lang || (
+          typeof configWithValue.getLang === 'function' ? configWithValue.getLang() : void 0
+        );
+        var cm = typeof configWithValue.getCM === 'function' ? configWithValue.getCM() : void 0;
+        var fileText = cm ? cm.getValue() : void 0;
 
-        var parsedJson = fileText ? parseJsonLike(fileText, lang) : void 0;
+        var parsedJson = fileText && useLang && useLang.ts ? parseJsonLike(fileText, useLang) : void 0;
+
+        if (lang && typeof lang.then === 'function') {
+          lang.then(function(createdLang) {
+            lang = createdLang;
+            setTimeout(function() {
+              if (cm) cm.refresh();
+            })
+          });
+        }
+
         return {
           fileText: fileText,
           parsedJson: parsedJson,
@@ -6090,6 +6110,11 @@ on(div, "touchstart", function () {
        * @param {JSONReplyModeState} state
        */
       function processToken(stream, state) {
+        if (!state.parsedJson) {
+          stream.skipToEnd();
+          return 'text';
+        }
+
         var lineStartPos = state.parsedJson.lineStarts[state.line];
         var currentSpanIndex = state.parsedJson.getSpanIndexAt(lineStartPos + stream.pos);
         var spanCh = stream.pos;
@@ -6690,7 +6715,7 @@ on(div, "touchstart", function () {
 
         addLinedPaperHandling(editor);
 
-        getTypeScriptLanguageService();
+        asyncGetTypeScriptLanguageService();
 
         /** @type {ReturnType<typeof createRequestVerbSidebarLayout>} */
         var requestVerbSidebarLayout;
@@ -6699,6 +6724,11 @@ on(div, "touchstart", function () {
 
         var _lang;
         function getTypeScriptLanguageService() {
+          if (_lang) return _lang;
+          else return asyncGetTypeScriptLanguageService();
+        }
+
+        function asyncGetTypeScriptLanguageService() {
           if (_lang) return Promise.resolve(/** @type {ReturnType<typeof createTypeScriptLanguageService>} */(_lang));
           return waitForTypeScriptLoad().then(function (ts) {
             if (!_lang) _lang = createTypeScriptLanguageService(ts);
@@ -6762,7 +6792,9 @@ on(div, "touchstart", function () {
               {
                 value: opts.text,
                 // @ts-ignore
-                getValue: function () { return cm ? cm.getValue() : opts.text;  },
+                getCM: function () { return cm; },
+                // @ts-ignore
+                getLang: getTypeScriptLanguageService,
 
                 mode: 'rest-reply',
 
@@ -7465,11 +7497,13 @@ on(div, "touchstart", function () {
             });
           };
 
+          var withCredentials = false;
+
           var startTime = getTimeNow();
           var ftc = fetchXHROverride(normalizedUrl, {
             method: parsFirst.verb,
             // @ts-ignore
-            withCredentials: true,
+            withCredentials: withCredentials,
             credentials: 'include',
             headers: /** @type {*} */({ entries: headers }),
             body: parsFirst.verb === 'GET' || !bodyNormalized ? void 0 :
@@ -7480,7 +7514,7 @@ on(div, "touchstart", function () {
               if (lastSendRequestInstance !== sendRequestInstance) return;
 
               var replyTime = getTimeNow() - startTime;
-              getTypeScriptLanguageService().then(function (lang) {
+              asyncGetTypeScriptLanguageService().then(function (lang) {
                 var headers = response.headers;
                 /** @type {string} */
                 var text = response.body;
@@ -7496,7 +7530,7 @@ on(div, "touchstart", function () {
                       bt.rawReply.editor.focus();
                   }
                 } else {
-                  getTypeScriptLanguageService().then(function (lang) {
+                  asyncGetTypeScriptLanguageService().then(function (lang) {
                     var bts = getBottomDetailsWithStructuredReply(lang);
                     bts.structuredReply.editor.setValue('PROCESSING  ' + text);
 
