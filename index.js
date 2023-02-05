@@ -5958,6 +5958,187 @@ on(div, "touchstart", function () {
 
     // #endregion PERSISTENCE
 
+
+    /**  @typedef {{
+     * update: (opts: { text: string, selectionStart: number, selectionEnd: number }) => void;
+     *
+     * text: string | undefined;
+     * selectionStart: number;
+     * selectionEnd: number;
+     *
+     * onchange: (() => void) | undefined;
+     * onselectionchange: (() => void) | undefined;
+     * }} RichEditorController */
+
+    /**
+     * @param {HTMLElement} host
+     * @param {*} commands
+     */
+    function flippingRichEditor(host, commands) {
+
+      function textareaEditor(host, commands) {
+        var textareaElem = document.createElement('textarea');
+        textareaElem.className = 'editor';
+        // all that stuff here...
+        host.appendChild(textareaElem);
+
+        /** @type {RichEditorController} */
+        var controller = {
+          update,
+          text: '',
+          selectionStart: 0,
+          selectionEnd: 0,
+          onchange: void 0,
+          onselectionchange: void 0
+        };
+
+        textareaElem.onchange = handleChangeEvent;
+        textareaElem.onkeydown = handleChangeEvent;
+        textareaElem.onkeyup = handleChangeEvent;
+        textareaElem.onmousedown = handleChangeEvent;
+        textareaElem.onmouseup = handleChangeEvent;
+        textareaElem.onpaste = handleChangeEvent;
+        textareaElem.onblur = handleChangeEvent;
+        textareaElem.onfocus = handleChangeEvent;
+        textareaElem.oninput = handleChangeEvent;
+        textareaElem.onselect = handleChangeEvent;
+        textareaElem.onselectionchange = handleChangeEvent;
+        textareaElem.onreset = handleChangeEvent;
+        textareaElem.onkeydown = handleKeydownEvent;
+
+        return controller;
+
+        /** @param {{ text: string, selectionStart: number, selectionEnd: number }} opts */
+        function update(opts) {
+          var selectionTextChanged = typeof opts.text === 'string' && textareaElem.value !== opts.text; 
+          var selectionStartChanged = typeof opts.selectionStart === 'number' && opts.selectionStart >= 0 && opts.selectionStart <= textareaElem.value.length;
+          var selectionEndChanged = typeof opts.selectionEnd === 'number' && opts.selectionEnd >= 0 && opts.selectionEnd <= textareaElem.value.length;
+
+          if (selectionTextChanged) textareaElem.value = opts.text;
+
+          if (selectionStartChanged || selectionEndChanged) {
+            var newSelectionStart = selectionStartChanged ? opts.selectionStart : textareaElem.selectionStart;
+            var newSelectionEnd = selectionEndChanged ? opts.selectionEnd : textareaElem.selectionEnd;
+            if (newSelectionStart > newSelectionEnd) {
+              var tmp = newSelectionStart;
+              newSelectionStart = newSelectionEnd;
+              newSelectionEnd = tmp;
+            }
+
+            if (typeof textareaElem.setSelectionRange === 'function') {
+              textareaElem.setSelectionRange(newSelectionStart, newSelectionEnd);
+            } else {
+              textareaElem.selectionStart = newSelectionStart;
+              textareaElem.selectionEnd = newSelectionEnd;
+            }
+          }
+
+          if (selectionTextChanged || selectionStartChanged || selectionEndChanged) {
+            stopPendingChangeEvents();
+            var change = selectionTextChanged ? 'change' : 'selectionchange';
+            fireChangeEvent(change);
+          }
+        }
+
+        /** @typedef {'change' | 'selectionchange'} SelectionChangeType */
+
+        /**
+         * @returns {SelectionChangeType | undefined}
+         */
+        function validateController(controllerInstance) {
+          if (!controllerInstance) controllerInstance = controller;
+          var currentText = (textareaElem.value || '');
+          var currentSelectionStart = textareaElem.selectionStart;
+          var currentSelectionEnd = textareaElem.selectionEnd;
+
+          var hasChange = currentText !== (controller.text == null ? '' : String(controller.text));
+          var hasSelectionChange = currentSelectionStart !== controller.selectionStart || currentSelectionEnd !== controller.selectionEnd;
+
+          var changeType = hasChange ? 'change' : hasSelectionChange ? 'selectionchange' : void 0;
+          if (controller.text !== currentText) controller.text = currentText;
+          if (controller.selectionStart !== currentSelectionStart) controller.selectionStart = currentSelectionStart;
+          if (controller.selectionEnd !== currentSelectionEnd) controller.selectionEnd = currentSelectionEnd;
+
+          return changeType;
+        }
+
+        /** @param {SelectionChangeType | undefined} selectionChangeType */
+        function fireChangeEvent(selectionChangeType) {
+          if (selectionChangeType === 'change' && typeof controller.onchange === 'function') controller.onchange();
+          if (selectionChangeType === 'selectionchange' && typeof controller.onselectionchange === 'function') controller.onselectionchange();
+        }
+
+        var changeEventTimeoutDebounce;
+        var changeEventTimeoutMax;
+
+        function handleChangeEvent() {
+          clearTimeout(changeEventTimeoutDebounce);
+          changeEventTimeoutDebounce = setTimeout(handleChangeEventNow, 200);
+          if (!changeEventTimeoutMax) changeEventTimeoutMax = setTimeout(handleChangeEventNow, 600);
+        }
+
+        /** @param {KeyboardEvent} evt */
+        function getKey(evt) {
+          return CodeMirror.keyName(evt);
+        }
+
+        /** @param {KeyboardEvent} evt */
+        function handleKeydownEvent(evt) {
+          if (!commands) return;
+          var key = getKey(evt);
+          var match = commands[key] || commands[key.replace(/\-/g, '')];
+          if (typeof match === 'function') {
+            return match(evt);
+          }
+        }
+
+        function stopPendingChangeEvents() {
+          clearTimeout(changeEventTimeoutDebounce); changeEventTimeoutDebounce = null;
+          clearTimeout(changeEventTimeoutMax); changeEventTimeoutMax = null;
+        }
+
+        function handleChangeEventNow() {
+          stopPendingChangeEvents();
+
+          var change = validateController();
+          fireChangeEvent(change);
+        }
+      }
+
+      function codemirrorEditor(host, commands) {
+
+        /** @type {import('codemirror').EditorConfiguration} */
+        var cmOptions = {
+          // @ts-ignore
+          lineNumbers: true,
+          extraKeys: commands,
+          // @ts-ignore
+          foldGutter: true,
+          gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+          lineWrapping: true,
+          autofocus: true
+        };
+
+        var editor = CodeMirror(
+          host,
+          cmOptions
+        );
+
+        /** @type {RichEditorController} */
+        var controller = {
+          update,
+          text: '',
+          selectionStart: 0,
+          selectionEnd: 0,
+          onchange: void 0,
+          onselectionchange: void 0,
+          onkeydown: void 0
+        };
+      }
+    }
+
+
+
     // #region CODEMIRROR PARSING MODE
     /** @typedef {{
      *  firstLine?: ReturnType<typeof parseFirstLine> | 'skip' | 'header' | 'body'
