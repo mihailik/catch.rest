@@ -5961,11 +5961,9 @@ on(div, "touchstart", function () {
 
     /**  @typedef {{
      * update: (opts: { text: string, selectionStart: number, selectionEnd: number }) => void;
-     *
      * text: string | undefined;
      * selectionStart: number;
      * selectionEnd: number;
-     *
      * onchange: (() => void) | undefined;
      * onselectionchange: (() => void) | undefined;
      * }} RichEditorController */
@@ -5977,6 +5975,10 @@ on(div, "touchstart", function () {
     function flippingRichEditor(host, commands) {
 
       function textareaEditor(host, commands) {
+
+        /** @typedef {'change' | 'selectionchange'} SelectionChangeType */
+
+
         var textareaElem = document.createElement('textarea');
         textareaElem.className = 'editor';
         // all that stuff here...
@@ -6011,8 +6013,16 @@ on(div, "touchstart", function () {
         /** @param {{ text: string, selectionStart: number, selectionEnd: number }} opts */
         function update(opts) {
           var selectionTextChanged = typeof opts.text === 'string' && textareaElem.value !== opts.text; 
-          var selectionStartChanged = typeof opts.selectionStart === 'number' && opts.selectionStart >= 0 && opts.selectionStart <= textareaElem.value.length;
-          var selectionEndChanged = typeof opts.selectionEnd === 'number' && opts.selectionEnd >= 0 && opts.selectionEnd <= textareaElem.value.length;
+          var selectionStartChanged =
+             // value is valid
+            typeof opts.selectionStart === 'number' && opts.selectionStart >= 0 && opts.selectionStart <= textareaElem.value.length
+            // value is different
+            && opts.selectionStart !== textareaElem.selectionStart;
+          var selectionEndChanged =
+          // value is valid
+          typeof opts.selectionEnd === 'number' && opts.selectionEnd >= 0 && opts.selectionEnd <= textareaElem.value.length
+          // value is different
+            && opts.selectionEnd !== textareaElem.selectionEnd;
 
           if (selectionTextChanged) textareaElem.value = opts.text;
 
@@ -6035,16 +6045,12 @@ on(div, "touchstart", function () {
 
           if (selectionTextChanged || selectionStartChanged || selectionEndChanged) {
             stopPendingChangeEvents();
+            /** @type {SelectionChangeType | undefined} */
             var change = selectionTextChanged ? 'change' : 'selectionchange';
             fireChangeEvent(change);
           }
         }
 
-        /** @typedef {'change' | 'selectionchange'} SelectionChangeType */
-
-        /**
-         * @returns {SelectionChangeType | undefined}
-         */
         function validateController(controllerInstance) {
           if (!controllerInstance) controllerInstance = controller;
           var currentText = (textareaElem.value || '');
@@ -6054,6 +6060,7 @@ on(div, "touchstart", function () {
           var hasChange = currentText !== (controller.text == null ? '' : String(controller.text));
           var hasSelectionChange = currentSelectionStart !== controller.selectionStart || currentSelectionEnd !== controller.selectionEnd;
 
+          /** @type {SelectionChangeType | undefined} */
           var changeType = hasChange ? 'change' : hasSelectionChange ? 'selectionchange' : void 0;
           if (controller.text !== currentText) controller.text = currentText;
           if (controller.selectionStart !== currentSelectionStart) controller.selectionStart = currentSelectionStart;
@@ -6079,6 +6086,7 @@ on(div, "touchstart", function () {
 
         /** @param {KeyboardEvent} evt */
         function getKey(evt) {
+          // @ts-ignore
           return CodeMirror.keyName(evt);
         }
 
@@ -6119,21 +6127,45 @@ on(div, "touchstart", function () {
           autofocus: true
         };
 
-        var editor = CodeMirror(
-          host,
-          cmOptions
-        );
+        /** @type {import('codemirror').Editor} */
+        var editor =
+        // @ts-ignore
+          CodeMirror(
+            host,
+            cmOptions
+          );
 
         /** @type {RichEditorController} */
         var controller = {
-          update,
+          update: update,
           text: '',
           selectionStart: 0,
           selectionEnd: 0,
           onchange: void 0,
-          onselectionchange: void 0,
-          onkeydown: void 0
+          onselectionchange: void 0
         };
+
+        return controller;
+
+        /** @param {{ text: string, selectionStart: number, selectionEnd: number }} opts */
+        function update(opts) {
+          var cmValue = editor.getValue();
+          var cmSelectionList = editor.listSelections();
+          var cmSelectionStartPos = !cmSelectionList || !cmSelectionList.length ? editor.getCursor() : cmSelectionList[0].head;
+          var cmSelectionStartEnd = !cmSelectionList || !cmSelectionList.length ? editor.getCursor() : cmSelectionList[0].anchor;
+          var cmSelectionStart = editor.indexFromPos(cmSelectionStartPos);
+          var cmSelectionEnd = editor.indexFromPos(cmSelectionStartEnd);
+          if (cmSelectionStart > cmSelectionStart) {
+            var tmp = cmSelectionStart;
+            cmSelectionStart = cmSelectionEnd;
+            cmSelectionEnd = tmp;
+          }
+
+          var selectionTextChanged = typeof opts.text === 'string' && cmValue !== opts.text;
+          var selectionStartChanged = typeof opts.selectionStart === 'number' && opts.selectionStart >= 0 && opts.selectionStart !== cmSelectionStart;
+          var selectionEndChanged = typeof opts.selectionEnd === 'number' && opts.selectionEnd >= 0 && opts.selectionEnd !== textareaElem.value.length;
+
+        }
       }
     }
 
@@ -6262,7 +6294,7 @@ on(div, "touchstart", function () {
         var cm = typeof configWithValue.getCM === 'function' ? configWithValue.getCM() : void 0;
         var fileText = cm ? cm.getValue() : void 0;
 
-        var parsedJson = fileText && useLang && useLang.ts ? parseJsonLike(fileText, useLang) : void 0;
+        var parsedJson = fileText && useLang && /** @type {*} */(useLang).ts ? parseJsonLike(fileText, /** @type {*} */(useLang)) : void 0;
 
         if (lang && typeof lang.then === 'function') {
           lang.then(function(createdLang) {
