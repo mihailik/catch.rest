@@ -3199,7 +3199,7 @@ on(div, "touchstart", function () {
           throw error;
         }
 
-        if (opts.withCredentials || opts.credentials === 'include') {
+        if (/** @type {*} */(opts).withCredentials || opts.credentials === 'include') {
           try { xhr.withCredentials = true; } catch (_assignmentError) { }
         }
 
@@ -5984,7 +5984,7 @@ on(div, "touchstart", function () {
         // all that stuff here...
         host.appendChild(textareaElem);
 
-        /** @satisfies {RichEditorController} */
+        /** @type {RichEditorController & { setDisabled(disabled?: boolean): void }} */
         var controller = {
           update: update,
           setDisabled: setDisabled,
@@ -6145,7 +6145,7 @@ on(div, "touchstart", function () {
             cmOptions
           );
 
-        /** @type {RichEditorController} */
+        /** @type {RichEditorController & { setDisabled(disabled?: boolean): void }} */
         var controller = {
           update: update,
           setDisabled: setDisabled,
@@ -6162,14 +6162,21 @@ on(div, "touchstart", function () {
         function setDisabled(disabled) {
           if (typeof disabled !== 'boolean') disabled = true;
 
-          // var currentlyDisabled = !!editor.;
+          var currentlyDisabled = !!editor.isReadOnly();
           if (currentlyDisabled === disabled) return;
-          textareaElem.disabled = disabled;
+          editor.setOption('readOnly', disabled);
         }
 
         /** @param {{ text: string, selectionStart: number, selectionEnd: number }} opts */
         function update(opts) {
           var cmValue = editor.getValue();
+
+          var selectionTextChanged = typeof opts.text === 'string' && cmValue !== opts.text;
+
+          if (selectionTextChanged) {
+            editor.setValue(String(opts.text));
+          }
+
           var cmSelectionList = editor.listSelections();
           var cmSelectionStartPos = !cmSelectionList || !cmSelectionList.length ? editor.getCursor() : cmSelectionList[0].head;
           var cmSelectionStartEnd = !cmSelectionList || !cmSelectionList.length ? editor.getCursor() : cmSelectionList[0].anchor;
@@ -6181,9 +6188,14 @@ on(div, "touchstart", function () {
             cmSelectionEnd = tmp;
           }
 
-          var selectionTextChanged = typeof opts.text === 'string' && cmValue !== opts.text;
           var selectionStartChanged = typeof opts.selectionStart === 'number' && opts.selectionStart >= 0 && opts.selectionStart !== cmSelectionStart;
-          var selectionEndChanged = typeof opts.selectionEnd === 'number' && opts.selectionEnd >= 0 && opts.selectionEnd !== textareaElem.value.length;
+          var selectionEndChanged = typeof opts.selectionEnd === 'number' && opts.selectionEnd >= 0 && opts.selectionEnd !== cmSelectionEnd;
+          if (selectionStartChanged || selectionEndChanged) {
+            editor.setSelection(
+              editor.posFromIndex(opts.selectionStart),
+              editor.posFromIndex(opts.selectionEnd)
+            );
+          }
 
         }
       }
@@ -6312,7 +6324,7 @@ on(div, "touchstart", function () {
           typeof configWithValue.getLang === 'function' ? configWithValue.getLang() : void 0
         );
         var cm = typeof configWithValue.getCM === 'function' ? configWithValue.getCM() : void 0;
-        var fileText = cm ? cm.getValue() : void 0;
+        var fileText = cm ? cm.getValue() : '';
 
         var parsedJson = fileText && useLang && /** @type {*} */(useLang).ts ? parseJsonLike(fileText, /** @type {*} */(useLang)) : void 0;
 
