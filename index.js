@@ -5984,9 +5984,10 @@ on(div, "touchstart", function () {
         // all that stuff here...
         host.appendChild(textareaElem);
 
-        /** @type {RichEditorController} */
+        /** @satisfies {RichEditorController} */
         var controller = {
-          update,
+          update: update,
+          setDisabled: setDisabled,
           text: '',
           selectionStart: 0,
           selectionEnd: 0,
@@ -6009,6 +6010,15 @@ on(div, "touchstart", function () {
         textareaElem.onkeydown = handleKeydownEvent;
 
         return controller;
+
+        /** @param {boolean=} disabled */
+        function setDisabled(disabled) {
+          if (typeof disabled !== 'boolean') disabled = true;
+
+          var currentlyDisabled = !!textareaElem.disabled;
+          if (currentlyDisabled === disabled) return;
+          textareaElem.disabled = disabled;
+        }
 
         /** @param {{ text: string, selectionStart: number, selectionEnd: number }} opts */
         function update(opts) {
@@ -6138,6 +6148,7 @@ on(div, "touchstart", function () {
         /** @type {RichEditorController} */
         var controller = {
           update: update,
+          setDisabled: setDisabled,
           text: '',
           selectionStart: 0,
           selectionEnd: 0,
@@ -6146,6 +6157,15 @@ on(div, "touchstart", function () {
         };
 
         return controller;
+
+        /** @param {boolean=} disabled */
+        function setDisabled(disabled) {
+          if (typeof disabled !== 'boolean') disabled = true;
+
+          // var currentlyDisabled = !!editor.;
+          if (currentlyDisabled === disabled) return;
+          textareaElem.disabled = disabled;
+        }
 
         /** @param {{ text: string, selectionStart: number, selectionEnd: number }} opts */
         function update(opts) {
