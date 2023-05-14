@@ -5,11 +5,13 @@
   "scripts": {
     "build": "parcel build lib.js"
   },
+  "engines": {
+    "browsers": "ie > 6"
+  },
   "devDependencies": {
-    "codemirror": "^6.0.1",
+    "codemirror": "5",
     "codemirror6": "npm:codemirror@^6.0.1",
     "parcel": "^2.8.3",
-    "process": "^0.11.10",
     "ts-jsonp": "^4.9.3",
     "typescript": "^4.9.3"
   }
