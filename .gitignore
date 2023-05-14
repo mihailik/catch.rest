@@ -1,3 +1,4 @@
 /node_modules
 /lib/node_modules
 /lib/.parcel-cache
+/lib/.dev-cache

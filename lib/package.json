@@ -3,7 +3,8 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "build": "parcel build lib.js"
+    "start": "parcel index.html --dist-dir .dev-cache",
+    "build": "parcel build index.html"
   },
   "engines": {
     "browsers": "ie > 6"
