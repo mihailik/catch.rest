@@ -4,6 +4,25 @@
 
 function catchREST() {
 
+  /** @type {import('codemirror')} */
+  var CodeMirror;
+
+  /** @type {import('codemirror6')} */
+  var CodeMirror6;
+
+  /** @type {import('typescript')} */
+  var ts;
+
+  /** @type {import('ts-jsonp')} */
+  var ts_jsonp;
+
+  /** @type {import('xlsx')} */
+  var xlsx;
+
+  /** @type {import('markdown')} */
+  var markdown;
+
+
   // Debug! Temporary!
   if (typeof window !== 'undefined' && window) {
     window.onerror = function () {
@@ -317,7 +336,7 @@ function catchREST() {
         for (var i = 0; i < arr.length; i++) {
           var pr = arr[i];
           if (pr && typeof pr.then === 'function') pr.then(resolve, reject);
-            // if element of input array is not promise, already resolve
+          // if element of input array is not promise, already resolve
           else resolve(pr);
         }
       });
@@ -866,7 +885,7 @@ function catchREST() {
         if (pos < nodeSpans[mid].pos) {
           end = mid;
         } else if (mid < nodeSpans.length - 1 && pos >= nodeSpans[mid + 1].pos) {
-          var start = mid +1;
+          var start = mid + 1;
         } else return mid;
         mid = ((start + end) / 2) | 0;
       }
@@ -1928,7 +1947,7 @@ Oh yes, wicked Unicode magic.
      */
     function readFileAsync(file, encoding) {
       return new Promise(function (resolve, reject) {
-        fs.readFile(file, { encoding: encoding === 'buffer' ? void 0: typeof encoding === 'undefined' ? 'utf8' : /** @type {BufferEncoding} */(encoding) }, function (err, text) {
+        fs.readFile(file, { encoding: encoding === 'buffer' ? void 0 : typeof encoding === 'undefined' ? 'utf8' : /** @type {BufferEncoding} */(encoding) }, function (err, text) {
           if (err) reject(err);
           else resolve(text);
         });
@@ -2154,16 +2173,16 @@ Oh yes, wicked Unicode magic.
 
             case '.css':
               processedContent = (
-              '///// ' + path.basename(importEntry.importLocalPath) + ' /////\n' +
-              '(function(value) { var style = document.createElement("style");\n' +
-              'if ("styleSheet" in style && "type" in style) {\n' +
-              ' style.type = "text/css";\n' +
-              ' style.styleSheet.cssText = value;\n' +
-              '} else {\n' +
-              ' style.innerHTML = value;\n' +
-              '}\n' +
-              '(document.body || document.getElementsByTagName("head")[0]).appendChild(style); })(' + JSON.stringify(importEntry.content) + ');\n'
-            );
+                '///// ' + path.basename(importEntry.importLocalPath) + ' /////\n' +
+                '(function(value) { var style = document.createElement("style");\n' +
+                'if ("styleSheet" in style && "type" in style) {\n' +
+                ' style.type = "text/css";\n' +
+                ' style.styleSheet.cssText = value;\n' +
+                '} else {\n' +
+                ' style.innerHTML = value;\n' +
+                '}\n' +
+                '(document.body || document.getElementsByTagName("head")[0]).appendChild(style); })(' + JSON.stringify(importEntry.content) + ');\n'
+              );
           }
 
           if (processedContent) libCombined.push(processedContent);
@@ -2195,28 +2214,28 @@ on(div, "touchstart", function () {
   input.lastTap = +new Date()
 })
         */ })
-        )
+          )
 
           .replace(
-            getFunctionCommentContent(function() {/*
+            getFunctionCommentContent(function () {/*
       on(d.scroller, "touchstart", function (e) {
       if (!signalDOMEvent(cm, e) && !isMouseLikeTouchEvent(e) && !clickInGutter(cm, e)) {
         d.input.ensurePolled();
             */}),
-            getFunctionCommentContent(function() {/*
+            getFunctionCommentContent(function () {/*
       on(d.scroller, "touchstart", function (e) {
       if (!signalDOMEvent(cm, e) && !isMouseLikeTouchEvent(e) && !clickInGutter(cm, e)) {
         d.input.ensurePolled(true);
             */})
-        )
+          )
 
           .replace(
-            getFunctionCommentContent(function() {/*
+            getFunctionCommentContent(function () {/*
   ContentEditableInput.prototype.ensurePolled = function () {
     this.forceCompositionEnd();
   };
             */}),
-            getFunctionCommentContent(function() {/*
+            getFunctionCommentContent(function () {/*
   ContentEditableInput.prototype.ensurePolled = function (cancellable) {
     this.forceCompositionEnd(cancellable);
   };
@@ -2237,7 +2256,7 @@ on(div, "touchstart", function () {
       if (startPos !== endPos) return // do not force composition during selection
     }
           */ })
-        )
+          )
 
         );
 
@@ -2454,7 +2473,7 @@ on(div, "touchstart", function () {
                 (skippedIndexHTML ? '' : 'index.html ') +
                 (skippedIndex404HTML ? '' : '404.html ') +
                 (skippedLib ? '' : 'lib.js ') +
-                (skippedTS ? '' : 'ts.js ' ) +
+                (skippedTS ? '' : 'ts.js ') +
                 (skippedReadme ? '' : 'README.md ') +
                 'with hash ' + catchREST_hash;
             });
@@ -2514,7 +2533,7 @@ on(div, "touchstart", function () {
              * @param {RequestContext} ctx
              */
             function handleRequest(ctx) {
-              return new Promise(function (resolve) { resolve(null);  }).then(function() {
+              return new Promise(function (resolve) { resolve(null); }).then(function () {
                 process.stdout.write(ctx.req.method + ' ' + ctx.url.pathname);
 
                 ctx.res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -2530,7 +2549,7 @@ on(div, "touchstart", function () {
                 if (ctx.req.method === 'OPTIONS') {
                   ctx.res.end();
                   return;
-                } 
+                }
 
                 if (ctx.req.method === 'POST' && ctx.url.pathname === '/xhr') {
                   return handleXhrRequest(ctx);
@@ -2576,7 +2595,7 @@ on(div, "touchstart", function () {
                     /** @type {boolean | undefined} */
                     var succeedParsingBody = true;
                   }
-                } catch (_err) {}
+                } catch (_err) { }
 
                 if (succeedParsingBody) {
                   var responseText = JSON.stringify({
@@ -2710,14 +2729,14 @@ on(div, "touchstart", function () {
 
             /** @param {RequestContext} ctx */
             function handleIndexHTMLRequest(ctx) {
-                return getEmbeddedWholeHTML(true /* urlencoded */);
+              return getEmbeddedWholeHTML(true /* urlencoded */);
             }
 
             /**
              * @param {RequestContext} ctx
              */
             function handleLocalFileRequest(ctx) {
-              return new Promise(function (resolve) { resolve(null); }).then(function() {
+              return new Promise(function (resolve) { resolve(null); }).then(function () {
                 // TODO: inject ETag for caching
 
                 var localPath = ctx.path.replace(/^\/+/, '').replace(/\/\.+/g, '/').replace(/\/\/+/g, '/');
@@ -3199,7 +3218,7 @@ on(div, "touchstart", function () {
           throw error;
         }
 
-        if (opts.withCredentials || opts.credentials === 'include') {
+        if (/** @type {*} */(opts).withCredentials || opts.credentials === 'include') {
           try { xhr.withCredentials = true; } catch (_assignmentError) { }
         }
 
@@ -3363,14 +3382,14 @@ on(div, "touchstart", function () {
  *  ondomnode?: (node: any, recognizedKind?: 'file' | 'totals', recognizedEntity?: any) => void;
  * }} BootState */
 
-      // function formatTotalsInner(timestamp: number, totalSize: number): string;
-      // function formatFileInner(path: string, content: any): string;
-      // function formatSize(totalSize: number): string;
-      // function formatDate(date: Date): string;
+    // function formatTotalsInner(timestamp: number, totalSize: number): string;
+    // function formatFileInner(path: string, content: any): string;
+    // function formatSize(totalSize: number): string;
+    // function formatDate(date: Date): string;
 
-      // function parseTotalsInner(content: string): { timestamp: number; totalSize: number; };
-      // function parseFileInner(content: string): { path: string; read(): string; };
-      // function parseHTML(html: string): { files: { path: string; content: string; start: number; end: number; }[]; totals: {size?: number; timestamp?: number; start: number; end: number;}; };
+    // function parseTotalsInner(content: string): { timestamp: number; totalSize: number; };
+    // function parseFileInner(content: string): { path: string; read(): string; };
+    // function parseHTML(html: string): { files: { path: string; content: string; start: number; end: number; }[]; totals: {size?: number; timestamp?: number; start: number; end: number;}; };
 
     /** @typedef {{
      *  timestamp?: number;
@@ -4155,96 +4174,96 @@ on(div, "touchstart", function () {
        * @param {CommentHeader} cmheader
        * @returns {DOMTotals | undefined}
        */
-        function tryParseDOMTotals(cmheader) {
+      function tryParseDOMTotals(cmheader) {
 
-          // TODO: preserve unknowns when parsing
-          var parts = cmheader.header.split(',');
-          var anythingParsed = false;
-          var totalSize = 0;
-          var timestamp = 0;
+        // TODO: preserve unknowns when parsing
+        var parts = cmheader.header.split(',');
+        var anythingParsed = false;
+        var totalSize = 0;
+        var timestamp = 0;
 
-          for (var i = 0; i < parts.length; i++) {
+        for (var i = 0; i < parts.length; i++) {
 
-            // total 234Kb
-            // total 23
-            // total 6Mb
+          // total 234Kb
+          // total 23
+          // total 6Mb
 
-            var totalFmt = /^\s*total\s+(\d*)\s*([KkMm])?b?\s*$/;
-            var totalMatch = totalFmt.exec(parts[i]);
-            if (totalMatch) {
-              try {
-                var total = parseInt(totalMatch[1]);
-                if ((totalMatch[2] + '').toUpperCase() === 'K')
-                  total *= 1024;
-                else if ((totalMatch[2] + '').toUpperCase() === 'M')
-                  total *= 1024 * 1024;
-                totalSize = total;
-                anythingParsed = true;
-              }
-              catch (totalParseError) { }
-              continue;
+          var totalFmt = /^\s*total\s+(\d*)\s*([KkMm])?b?\s*$/;
+          var totalMatch = totalFmt.exec(parts[i]);
+          if (totalMatch) {
+            try {
+              var total = parseInt(totalMatch[1]);
+              if ((totalMatch[2] + '').toUpperCase() === 'K')
+                total *= 1024;
+              else if ((totalMatch[2] + '').toUpperCase() === 'M')
+                total *= 1024 * 1024;
+              totalSize = total;
+              anythingParsed = true;
             }
-
-            var savedFmt = /^\s*saved\s+(\d+)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d+)(\s+(\d+)\:(\d+)(\:(\d+(\.(\d+))?))\s*(GMT\s*[\-\+]?\d+\:?\d*)?)?\s*$/i;
-            var savedMatch = savedFmt.exec(parts[i]);
-            if (savedMatch) {
-              // 25 Apr 2015 22:52:01.231
-              try {
-                var savedDay = parseInt(savedMatch[1]);
-
-                // first find string index within JANFEBMAR...NOVDEC then divide by three
-                // which happens to be (0...11)*3
-                var savedMonth = monthsUpperCaseStr.indexOf(savedMatch[2].toUpperCase());
-                if (savedMonth >= 0 && savedMonth % 3 === 0)
-                  savedMonth = savedMonth / 3;
-
-                var savedYear = parseInt(savedMatch[3]);
-                if (savedYear < 100)
-                  savedYear += 2000; // no 19xx notation anymore :-(
-                var savedHour = parseInt(savedMatch[5]);
-                var savedMinute = parseInt(savedMatch[6]);
-                var savedSecond = savedMatch[8] ? parseFloat(savedMatch[8]) : 0;
-
-                if (savedMatch[4]) {
-                  timestamp = new Date(savedYear, savedMonth, savedDay, savedHour, savedMinute, savedSecond | 0).valueOf();
-                  timestamp += (savedSecond - (savedSecond | 0)) * 1000; // milliseconds
-
-                  var savedGMTStr = savedMatch[11];
-                  if (savedGMTStr) {
-                    var gmtColonPos = savedGMTStr.indexOf(':');
-                    if (gmtColonPos > 0) {
-                      var gmtH = parseInt(savedGMTStr.slice(0, gmtColonPos));
-                      timestamp += gmtH * 60 /*min*/ * 60 /*sec*/ * 1000 /*msec*/;
-                      var gmtM = parseInt(savedGMTStr.slice(gmtColonPos + 1));
-                      timestamp += gmtM * 60 /*sec*/ * 1000 /*msec*/;
-                    }
-                  }
-                }
-                else {
-                  timestamp = new Date(savedYear, savedMonth, savedDay).valueOf();
-                }
-
-                anythingParsed = true;
-              }
-              catch (savedParseError) { }
-            }
-
+            catch (totalParseError) { }
+            continue;
           }
 
-          if (anythingParsed)
-            return domTotals(timestamp, totalSize, cmheader.node);
+          var savedFmt = /^\s*saved\s+(\d+)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d+)(\s+(\d+)\:(\d+)(\:(\d+(\.(\d+))?))\s*(GMT\s*[\-\+]?\d+\:?\d*)?)?\s*$/i;
+          var savedMatch = savedFmt.exec(parts[i]);
+          if (savedMatch) {
+            // 25 Apr 2015 22:52:01.231
+            try {
+              var savedDay = parseInt(savedMatch[1]);
+
+              // first find string index within JANFEBMAR...NOVDEC then divide by three
+              // which happens to be (0...11)*3
+              var savedMonth = monthsUpperCaseStr.indexOf(savedMatch[2].toUpperCase());
+              if (savedMonth >= 0 && savedMonth % 3 === 0)
+                savedMonth = savedMonth / 3;
+
+              var savedYear = parseInt(savedMatch[3]);
+              if (savedYear < 100)
+                savedYear += 2000; // no 19xx notation anymore :-(
+              var savedHour = parseInt(savedMatch[5]);
+              var savedMinute = parseInt(savedMatch[6]);
+              var savedSecond = savedMatch[8] ? parseFloat(savedMatch[8]) : 0;
+
+              if (savedMatch[4]) {
+                timestamp = new Date(savedYear, savedMonth, savedDay, savedHour, savedMinute, savedSecond | 0).valueOf();
+                timestamp += (savedSecond - (savedSecond | 0)) * 1000; // milliseconds
+
+                var savedGMTStr = savedMatch[11];
+                if (savedGMTStr) {
+                  var gmtColonPos = savedGMTStr.indexOf(':');
+                  if (gmtColonPos > 0) {
+                    var gmtH = parseInt(savedGMTStr.slice(0, gmtColonPos));
+                    timestamp += gmtH * 60 /*min*/ * 60 /*sec*/ * 1000 /*msec*/;
+                    var gmtM = parseInt(savedGMTStr.slice(gmtColonPos + 1));
+                    timestamp += gmtM * 60 /*sec*/ * 1000 /*msec*/;
+                  }
+                }
+              }
+              else {
+                timestamp = new Date(savedYear, savedMonth, savedDay).valueOf();
+              }
+
+              anythingParsed = true;
+            }
+            catch (savedParseError) { }
+          }
+
         }
 
+        if (anythingParsed)
+          return domTotals(timestamp, totalSize, cmheader.node);
+      }
 
-        /** @param {number} totalSize */
-        function formatSizeDOMTotals(totalSize) {
-          return (
-            totalSize < 1024 * 9 ? totalSize + '' :
-              totalSize < 1024 * 1024 * 9 ? ((totalSize / 1024) | 0) + 'Kb' :
-                ((totalSize / (1024 * 1024)) | 0) + 'Mb');
-        }
 
-        /** @param {Date} date */
+      /** @param {number} totalSize */
+      function formatSizeDOMTotals(totalSize) {
+        return (
+          totalSize < 1024 * 9 ? totalSize + '' :
+            totalSize < 1024 * 1024 * 9 ? ((totalSize / 1024) | 0) + 'Kb' :
+              ((totalSize / (1024 * 1024)) | 0) + 'Mb');
+      }
+
+      /** @param {Date} date */
       function formatDateDOMTotals(date) {
         var dateLocalStr = date.toString(); // FIX: not very compatible option!
         var gmtMatch = (/(GMT\s*[\-\+]\d+(\:\d+)?)/i).exec(dateLocalStr);
@@ -4562,20 +4581,20 @@ on(div, "touchstart", function () {
         base64.btoa = _btoa;
         base64.atob = _atob;
 
-      /** @param {string} text */
-      function base64(text) {
-        if (text && text.charCodeAt(0) === 42) {
-          var bin = _atob(text.slice(1));
-          var buf = typeof Uint8Array === 'function' ? new Uint8Array(bin.length) : [];
-          for (var i = 0; i < bin.length; i++) {
-            buf[i] = bin.charCodeAt(i);
+        /** @param {string} text */
+        function base64(text) {
+          if (text && text.charCodeAt(0) === 42) {
+            var bin = _atob(text.slice(1));
+            var buf = typeof Uint8Array === 'function' ? new Uint8Array(bin.length) : [];
+            for (var i = 0; i < bin.length; i++) {
+              buf[i] = bin.charCodeAt(i);
+            }
+            return buf;
           }
-          return buf;
+          else {
+            return _atob(text);
+          }
         }
-        else {
-          return _atob(text);
-        }
-      }
 
         /** @param {string} text */
         function json(text) {
@@ -6056,7 +6075,7 @@ on(div, "touchstart", function () {
 
     // #region CODEMIRROR RESPONSE JSON MODE
     /** @typedef {{
-     *  fileText: string;
+     *  fileText: string | undefined;
      *  parsedJson: ReturnType<typeof parseJsonLike> | undefined;
      *  line: number;
      * }} JSONReplyModeState */
@@ -6081,12 +6100,17 @@ on(div, "touchstart", function () {
         var cm = typeof configWithValue.getCM === 'function' ? configWithValue.getCM() : void 0;
         var fileText = cm ? cm.getValue() : void 0;
 
-        var parsedJson = fileText && useLang && useLang.ts ? parseJsonLike(fileText, useLang) : void 0;
+        var parsedJson =
+          fileText &&
+            useLang &&
+            /** @type {*} */(useLang).ts ?
+            parseJsonLike(fileText, /** @type {*} */(useLang)) :
+            void 0;
 
         if (lang && typeof lang.then === 'function') {
-          lang.then(function(createdLang) {
+          lang.then(function (createdLang) {
             lang = createdLang;
-            setTimeout(function() {
+            setTimeout(function () {
               if (cm) cm.refresh();
             })
           });
@@ -6132,7 +6156,7 @@ on(div, "touchstart", function () {
         if (stream.eol())
           state.line++;
 
-        return 'line' + state.line + ' ' + 'ch' + spanCh +' ' + currentSpan.highlight;
+        return 'line' + state.line + ' ' + 'ch' + spanCh + ' ' + currentSpan.highlight;
       }
     }
     // #endregion
@@ -6512,8 +6536,8 @@ on(div, "touchstart", function () {
             toTab.contentElem.style.visibility = '';
 
             animateTimeout = setTimeout(function () {
-              fromTab.contentElem.style.transition = 'opacity ' + animationMsec + 'ms, trasform ' + Math.floor(animationMsec/2) + 'ms';
-              toTab.contentElem.style.transition = 'opacity ' + animationMsec + 'ms, trasform ' + Math.floor(animationMsec/2) + 'ms';
+              fromTab.contentElem.style.transition = 'opacity ' + animationMsec + 'ms, trasform ' + Math.floor(animationMsec / 2) + 'ms';
+              toTab.contentElem.style.transition = 'opacity ' + animationMsec + 'ms, trasform ' + Math.floor(animationMsec / 2) + 'ms';
 
               animateTimeout = setTimeout(function () {
                 toTab.contentElem.style.opacity = '1';
@@ -6663,9 +6687,7 @@ on(div, "touchstart", function () {
           'Cmd-T': executeApplyTypewriterModifierCommand
         });
 
-        // @ts-ignore
-        CodeMirror
-          .defineMode('rest-request', restRequestMode);
+        CodeMirror.defineMode('rest-request', restRequestMode);
         var replyModeDefined = false;
 
         layout.requestEditorHost.innerHTML = '';
@@ -6698,12 +6720,10 @@ on(div, "touchstart", function () {
         } else {
           cmOptions.value = text;
           cmOptions.mode = 'rest-request';
-          var editor =
-            // @ts-ignore
-            CodeMirror(
-              layout.requestEditorHost,
-              cmOptions
-            );
+          var editor = CodeMirror(
+            layout.requestEditorHost,
+            cmOptions
+          );
 
           editor.on('changes', debounce(function () {
             updateVerbAutoDetect(true);
@@ -6775,41 +6795,37 @@ on(div, "touchstart", function () {
          * }} opts */
         function createBottomCodeMirror(opts) {
           if (!replyModeDefined) {
-            // @ts-ignore
-            CodeMirror
-              .defineMode('rest-reply', function (config, modeOptions) {
-                /** @type {typeof config & {lang?: ReturnType<typeof createTypeScriptLanguageService>, getValue?(): string }} */
-                var configClone = Object.assign({}, config);
-                configClone.lang = opts.lang;
-                return jsonReplyMode(configClone, modeOptions);
-              });
+            CodeMirror.defineMode('rest-reply', function (config, modeOptions) {
+              /** @type {typeof config & {lang?: ReturnType<typeof createTypeScriptLanguageService>, getValue?(): string }} */
+              var configClone = Object.assign({}, config);
+              configClone.lang = opts.lang;
+              return jsonReplyMode(configClone, modeOptions);
+            });
             replyModeDefined = true;
           }
 
-          var cm =
-            //@ts-ignore
-            CodeMirror(
-              opts.host,
-              {
-                value: opts.text,
-                // @ts-ignore
-                getCM: function () { return cm; },
-                // @ts-ignore
-                getLang: getTypeScriptLanguageService,
+          var cm = CodeMirror(
+            opts.host,
+            {
+              value: opts.text,
+              // @ts-ignore
+              getCM: function () { return cm; },
+              // @ts-ignore
+              getLang: getTypeScriptLanguageService,
 
-                mode: 'rest-reply',
+              mode: 'rest-reply',
 
-                // @ts-ignore
-                foldGutter: true,
-                gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
-                extraKeys: {
-                  Tab: executeTabKeyCommand
-                },
+              // @ts-ignore
+              foldGutter: true,
+              gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+              extraKeys: {
+                Tab: executeTabKeyCommand
+              },
 
-                lineNumbers: true,
-                readOnly: true,
-                lineWrapping: true
-              });
+              lineNumbers: true,
+              readOnly: true,
+              lineWrapping: true
+            });
 
           var copyFocus = cm.focus.bind(cm);
           cm.focus = function () {
@@ -6840,7 +6856,7 @@ on(div, "touchstart", function () {
          * @param {ReturnType<typeof createTypeScriptLanguageService>} lang
          * @param {string=} text
          */
-        function  getBottomDetailsWithRawReply(lang, text) {
+        function getBottomDetailsWithRawReply(lang, text) {
           var bt = /** @type {WithNonNullable<ReturnType<typeof getBottomDetailsWithTabs>, 'rawReply'>} */(
             getBottomDetailsWithTabs());
           if (bt.rawReply) {
@@ -7262,11 +7278,7 @@ on(div, "touchstart", function () {
          * @param {Function} firstClickCallback
          */
         function createCodeMirrorWithFirstClickChange(host, options, firstClickCallback) {
-          /** @type {import('codemirror').Editor} */
-          var editor =
-            // @ts-ignore
-            CodeMirror(
-              host, options);
+          var editor = CodeMirror(host, options);
 
           var leftClickKeyMap = { LeftClick: onFirstClick, LeftDoubleClick: onFirstClick };
           editor.addKeyMap(leftClickKeyMap);
@@ -7386,10 +7398,10 @@ on(div, "touchstart", function () {
             elem.style.cssText =
               'position: fixed; ' +
               'left: ' + cursorCoordPos.left + 'px; ' +
-              'top: ' + cursorCoordPos.top  + 'px; ' +
+              'top: ' + cursorCoordPos.top + 'px; ' +
               'width: 2px; ' +
               'height: ' + (cursorCoordPos.bottom - cursorCoordPos.top) + 'px; ' +
-              'transition: transform ' + animationMsec + 'ms ease-in, opacity '+ animationMsec + 'ms; ' +
+              'transition: transform ' + animationMsec + 'ms ease-in, opacity ' + animationMsec + 'ms; ' +
               'background: black; ' +
               'border: solid 1px rgba(255,255,255,0.5); ' +
               'z-index: 2000; ' +
@@ -7694,9 +7706,42 @@ on(div, "touchstart", function () {
       }
     }
 
-    function minimalDependenciesPresent() {
-      // @ts-ignore
-      return typeof CodeMirror === 'function';
+    function whenDependenciesPresent(callback) {
+      if (/** @type {*} */(CodeMirror)) {
+        callback();
+        return true;
+      }
+
+      var lib = /** @type {*} */(catchREST).lib;
+      if (!lib) {
+        /** @type {*} */(catchREST).lib = function () { whenDependenciesPresent(callback); };
+        return;
+      }
+
+      CodeMirror = lib.CodeMirror;
+      CodeMirror6 = lib.CodeMirror6;
+      ts = lib.ts;
+      ts_jsonp = lib.ts_jsonp;
+      xlsx = lib.xlsx;
+      markdown = lib.markdown;
+
+      var loadCount =
+        (!!CodeMirror ? 1 : 0) +
+        (!!CodeMirror6 ? 1 : 0) +
+        (!!ts ? 1 : 0) +
+        (!!ts_jsonp ? 1 : 0) +
+        (!!xlsx ? 1 : 0) +
+        (!!markdown ? 1 : 0);
+      
+      if (loadCount) {
+        callback();
+        return true;
+      }
+
+      /** @type {*} */(catchREST).lib = function () {
+        lib();
+        whenDependenciesPresent(callback);
+      };
     }
 
     function isTtyWtf() {
@@ -7721,13 +7766,7 @@ on(div, "touchstart", function () {
       sanitizeDOM();
 
       var shellLoader = shell(text, verb);
-      if (minimalDependenciesPresent()) {
-        complete();
-      } else {
-        /** @type {*} */(catchREST)['continue'] = function () {
-          complete();
-        };
-      }
+      whenDependenciesPresent(complete);
 
       function getTextAndVerbFromUrlEncoded() {
         var enc = detectCurrentUrlEncoded(location);
@@ -7751,7 +7790,7 @@ Send this to test?
               (skipVerb ? '' : enc.encodedUrl.verb) + (enc.encodedUrl.addr ? (skipVerb ? '' : ' ') + enc.encodedUrl.addr : '');
           var text =
             firstLine +
-              (enc.encodedUrl.body ? (firstLine ? '\n' : '') + enc.encodedUrl.body : '');
+            (enc.encodedUrl.body ? (firstLine ? '\n' : '') + enc.encodedUrl.body : '');
           var verb = enc.encodedUrl.verb;
         }
 
@@ -7833,7 +7872,7 @@ Send this to test?
         var firstLine = parsed && parseFirstLine(parsed.firstLine);
         if (!parsed || !firstLine) {
           slashSeparated.push(
-            makeEncodedURL('', '', text ||'')
+            makeEncodedURL('', '', text || '')
           );
         } else {
           if (firstLine.verbPos >= 0) slashSeparated.push(makeEncodedURL(firstLine.verb, firstLine.url, parsed.body));
@@ -7874,33 +7913,23 @@ Send this to test?
       var shellLoader = shell('Loading...', 'text');
 
       loadAsync().then(function (drive) {
-        if (minimalDependenciesPresent()) {
-          complete();
-        } else {
-          /** @type {*} */(catchREST)['continue'] = function () {
-            docLoadedCheckDependenciesAgain();
-          };
-          on(window, 'load', complete);
-          setTimeout(function () {
-            if (document.readyState === 'complete')
-              docLoadedCheckDependenciesAgain();
-          }, 100);
+        var completed = false;
+
+        if (!whenDependenciesPresent(complete)) {
+          completed = true;
+          docLoadedCheckDependenciesAgain();
         }
 
         if (typeof console !== 'undefined' && console && typeof console.log === 'function')
           console.log('drive loaded ', drive);
 
-        var completed = false;
-
         function docLoadedCheckDependenciesAgain() {
-          if (minimalDependenciesPresent())
-            return complete();
-
           var libScript = document.createElement('script');
           libScript.src = thisScriptUrl.replace(/\/[^\/]+$/, '/lib.js');
           libScript.onload = function () {
-            if (minimalDependenciesPresent())
-              return complete();
+            setTimeout(function () {
+              throw new Error('Could not load dependencies?');
+            }, 100);
           };
           document.body.appendChild(libScript);
         }
@@ -7948,7 +7977,7 @@ Send this to test?
 
                 case 3: // text
                 case 4: // CDATA
-                // case 8: // comment
+                  // case 8: // comment
                   var textContent = nod.textContent || nod.nodeValue || /** @type {*} */(nod).innerText;
                   if (textContent) combined.push(textContent);
                   break;
@@ -8008,7 +8037,7 @@ Send this to test?
 
           function continueLoading() {
             if (document.readyState === 'complete')
-              return persist.finishParsing(function(drive) {
+              return persist.finishParsing(function (drive) {
                 resolve(drive);
               });
 
@@ -8065,8 +8094,8 @@ Send this to test?
   }
 
   function detectEnvironment() {
-    if (typeof window !== 'undefined' && window && /**@type{*}*/(window.alert)
-      && typeof document !== 'undefined' && document && /**@type{*}*/(document.createElement))
+    if (typeof window !== 'undefined' && window && !!window.alert
+      && typeof document !== 'undefined' && document && !!document.createElement)
       return 'browser';
 
     // TODO: detect worker in browser
