@@ -6695,6 +6695,9 @@ on(div, "touchstart", function () {
         var cmOptions = {
           // @ts-ignore
           lineNumbers: true,
+          lineNumberFormatter: function (line) {
+            return line.toString();
+          },
           extraKeys: addedCommands,
           // @ts-ignore
           foldGutter: true,
@@ -6823,6 +6826,9 @@ on(div, "touchstart", function () {
               },
 
               lineNumbers: true,
+              lineNumberFormatter: function (line) {
+                return line.toString();
+              },
               readOnly: true,
               lineWrapping: true
             });
@@ -7296,6 +7302,10 @@ on(div, "touchstart", function () {
               editor.off('beforeSelectionChange', onFirstClick);
               editor.off('dblclick', onFirstClick);
               editor.off('touchstart', onFirstClick);
+              editor.refresh();
+              setTimeout(function () {
+                editor.refresh();
+              }, 300);
               return firstClickCallback();
             }, 50);
           }
@@ -7714,7 +7724,11 @@ on(div, "touchstart", function () {
 
       var lib = /** @type {*} */(catchREST).lib;
       if (!lib) {
-        /** @type {*} */(catchREST).lib = function () { whenDependenciesPresent(callback); };
+        /** @type {*} */(catchREST).lib = function () {
+          setTimeout(function () {
+            whenDependenciesPresent(callback);
+          }, 100);
+        };
         return;
       }
 
